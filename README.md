@@ -95,7 +95,66 @@ Example error responses:
 }
 ```
 
-The current frontend includes the public Home, Login, and Register pages, the static farmer workspace, and the static buyer workspace at `/buyer/dashboard`, `/buyer/marketplace`, `/buyer/crop/:id`, `/buyer/orders`, and `/buyer/profile`. The backend has a clean Express architecture with PostgreSQL connectivity, health routing, error handling, database initialization, and a working registration endpoint. Login/JWT and marketplace persistence will be added in later milestones.
+## Login API
+
+### POST /api/auth/login
+
+Authenticates a user by email and password and returns a JWT token.
+
+Request body:
+
+```json
+{
+  "email": "farmer@example.com",
+  "password": "password123"
+}
+```
+
+Success response:
+
+```json
+{
+  "success": true,
+  "message": "Login successful",
+  "token": "jwt_token_here",
+  "user": {
+    "id": "uuid",
+    "name": "Test Farmer",
+    "email": "farmer@example.com",
+    "role": "farmer"
+  }
+}
+```
+
+The API returns `401` for invalid credentials and never exposes the password or password hash.
+
+## Protected route
+
+### GET /api/auth/me
+
+Requires a Bearer token in the `Authorization` header:
+
+```http
+Authorization: Bearer <jwt_token>
+```
+
+Success response:
+
+```json
+{
+  "success": true,
+  "user": {
+    "id": "uuid",
+    "name": "Test Farmer",
+    "email": "farmer@example.com",
+    "role": "farmer"
+  }
+}
+```
+
+Missing or invalid tokens return `401`.
+
+The current frontend includes the public Home, Login, and Register pages, the static farmer workspace, and the static buyer workspace at `/buyer/dashboard`, `/buyer/marketplace`, `/buyer/crop/:id`, `/buyer/orders`, and `/buyer/profile`. The backend has a clean Express architecture with PostgreSQL connectivity, health routing, error handling, database initialization, working registration, and JWT-based login middleware. Crop/order APIs and full authorization rules are deferred to later milestones.
 
 ## Configure Supabase PostgreSQL
 
