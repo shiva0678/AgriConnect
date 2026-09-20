@@ -910,3 +910,99 @@ Result:
 ```
 
 No authentication, JWT logic, database tables, Supabase connection, or business API was added.
+
+---
+
+### Milestone 7: Supabase PostgreSQL Connection and Users Table
+
+#### Objective
+
+Connect the Express backend to Supabase PostgreSQL through `DATABASE_URL`, verify the connection, and create the initial users table. Registration, login, JWT, crop tables, and order tables remain deferred.
+
+#### Work completed
+
+1. Added a shared `pg.Pool` in `backend/config/db.js`.
+2. Added Supabase-compatible SSL configuration without hardcoding credentials.
+3. Added a guarded database connection test using `SELECT 1`.
+4. Added PostgreSQL pool error handling that logs a safe error message.
+5. Added startup database initialization.
+6. Added an idempotent `users` table initializer using `CREATE TABLE IF NOT EXISTS`.
+7. Added a unique constraint on `users.email`.
+8. Added a role constraint allowing only `farmer` and `buyer`.
+9. Added `created_at` with a database timestamp default.
+10. Added `GET /api/health/db`.
+11. Added safe `503` JSON response handling when database health checks fail.
+12. Updated `.env` and `.env.example` to use `PORT`, `DATABASE_URL`, and `JWT_SECRET`.
+13. Updated README instructions without recording any database credential.
+
+#### Users table schema
+
+```text
+users
+|-- id          UUID primary key
+|-- name        VARCHAR(120) not null
+|-- email       VARCHAR(255) unique not null
+|-- phone       VARCHAR(20) not null
+|-- password    TEXT not null
+|-- role        VARCHAR(20), farmer or buyer only
+`-- created_at  TIMESTAMPTZ with NOW() default
+```
+
+The `password` column is designed to store a bcrypt hash in a later authentication milestone. No registration code currently writes to this table, and no plaintext password is inserted.
+
+#### Database health endpoint
+
+`GET /api/health/db`
+
+Successful response:
+
+```json
+{
+  "success": true,
+  "message": "Database connection successful"
+}
+```
+
+Connection failures return HTTP `503` without exposing the connection string or database error details:
+
+```json
+{
+  "success": false,
+  "message": "Database connection failed"
+}
+```
+
+#### Verification output
+
+Backend startup:
+
+```powershell
+cd backend
+npm start
+```
+
+Result:
+
+```text
+AgriConnect API listening on port 5000
+```
+
+Base health endpoint:
+
+```json
+{ "success": true, "message": "AgriConnect API is running" }
+```
+
+Database health endpoint:
+
+```json
+{ "success": true, "message": "Database connection successful" }
+```
+
+Direct schema verification returned these column names:
+
+```text
+id,name,email,phone,password,role,created_at
+```
+
+No registration, login, JWT, crop table, order table, or Supabase Auth implementation was added.

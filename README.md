@@ -34,4 +34,25 @@ npm run dev
 
 The API listens on `http://localhost:5000` by default. Check `GET /api/health` for the starter health response.
 
-The current frontend includes the public Home, Login, and Register pages, the static farmer workspace, and the static buyer workspace at `/buyer/dashboard`, `/buyer/marketplace`, `/buyer/crop/:id`, `/buyer/orders`, and `/buyer/profile`. The backend has a clean Express architecture with health routing, error handling, and a deferred PostgreSQL configuration. Authentication, database tables, marketplace persistence, and analytics will be added in later milestones.
+The current frontend includes the public Home, Login, and Register pages, the static farmer workspace, and the static buyer workspace at `/buyer/dashboard`, `/buyer/marketplace`, `/buyer/crop/:id`, `/buyer/orders`, and `/buyer/profile`. The backend has a clean Express architecture with PostgreSQL connectivity, health routing, error handling, and an initial users table. Authentication, marketplace persistence, and analytics will be added in later milestones.
+
+## Configure Supabase PostgreSQL
+
+Copy the environment template inside `backend/`:
+
+```powershell
+cd backend
+copy .env.example .env
+```
+
+Set `DATABASE_URL` in `backend/.env` to the PostgreSQL URI from **Supabase Dashboard → Project Settings → Database → Connection string**. Use the Session Pooler URI when running from a local development machine if Supabase recommends it for your project.
+
+```env
+PORT=5000
+DATABASE_URL=your_private_supabase_postgresql_uri
+JWT_SECRET=
+```
+
+Do not paste credentials into source files, documentation, screenshots, or Git. The root `.gitignore` excludes `backend/.env`. The `.env.example` file contains variable names only and must not contain real credentials.
+
+The backend tests the connection during startup and initializes the `users` table. Check `GET http://localhost:5000/api/health/db` after starting the server.
