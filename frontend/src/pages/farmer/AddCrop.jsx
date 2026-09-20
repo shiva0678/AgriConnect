@@ -1,8 +1,40 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import {
+  validatePositiveNumber,
+  validateRequired,
+} from "../../utils/formValidation";
 
 function AddCrop() {
+  const [values, setValues] = useState({
+    name: "",
+    category: "",
+    quantity: "",
+    price: "",
+    harvestDate: "",
+    region: "",
+  });
+  const [errors, setErrors] = useState({});
   const [saved, setSaved] = useState(false);
+
+  function updateValue(field, value) {
+    setValues((current) => ({ ...current, [field]: value }));
+    setErrors((current) => ({ ...current, [field]: "" }));
+    setSaved(false);
+  }
+
+  function validate() {
+    const nextErrors = {
+      name: validateRequired(values.name, "Crop name"),
+      category: validateRequired(values.category, "Category"),
+      quantity: validatePositiveNumber(values.quantity, "Quantity"),
+      price: validatePositiveNumber(values.price, "Price"),
+      harvestDate: validateRequired(values.harvestDate, "Harvest date"),
+      region: validateRequired(values.region, "Region"),
+    };
+    setErrors(nextErrors);
+    return !Object.values(nextErrors).some(Boolean);
+  }
   return (
     <div className="farmer-page reveal-up">
       <div className="farmer-page-heading farmer-page-heading--compact">
@@ -17,9 +49,10 @@ function AddCrop() {
       </div>
       <form
         className="crop-form"
+        noValidate
         onSubmit={(event) => {
           event.preventDefault();
-          setSaved(true);
+          if (validate()) setSaved(true);
         }}
       >
         <div className="crop-form__main">
@@ -32,13 +65,25 @@ function AddCrop() {
               </div>
             </div>
             <div className="form-grid">
-              <label>
+              <label className={errors.name ? "field-invalid" : ""}>
                 Crop name
-                <input required placeholder="e.g. Tomatoes" />
+                <input
+                  value={values.name}
+                  onChange={(event) => updateValue("name", event.target.value)}
+                  placeholder="e.g. Tomatoes"
+                />
+                {errors.name && (
+                  <span className="field-error">{errors.name}</span>
+                )}
               </label>
-              <label>
+              <label className={errors.category ? "field-invalid" : ""}>
                 Category
-                <select required defaultValue="">
+                <select
+                  value={values.category}
+                  onChange={(event) =>
+                    updateValue("category", event.target.value)
+                  }
+                >
                   <option value="" disabled>
                     Select a category
                   </option>
@@ -47,22 +92,65 @@ function AddCrop() {
                   <option>Grains</option>
                   <option>Spices</option>
                 </select>
+                {errors.category && (
+                  <span className="field-error">{errors.category}</span>
+                )}
               </label>
-              <label>
+              <label className={errors.quantity ? "field-invalid" : ""}>
                 Quantity available
-                <input required type="text" placeholder="e.g. 1,200 kg" />
+                <input
+                  value={values.quantity}
+                  onChange={(event) =>
+                    updateValue("quantity", event.target.value)
+                  }
+                  type="number"
+                  min="0"
+                  step="any"
+                  placeholder="e.g. 1,200 kg"
+                />
+                {errors.quantity && (
+                  <span className="field-error">{errors.quantity}</span>
+                )}
               </label>
-              <label>
+              <label className={errors.price ? "field-invalid" : ""}>
                 Expected price
-                <input required type="text" placeholder="e.g. ₹32 / kg" />
+                <input
+                  value={values.price}
+                  onChange={(event) => updateValue("price", event.target.value)}
+                  type="number"
+                  min="0"
+                  step="any"
+                  placeholder="e.g. ₹32 / kg"
+                />
+                {errors.price && (
+                  <span className="field-error">{errors.price}</span>
+                )}
               </label>
-              <label>
+              <label className={errors.harvestDate ? "field-invalid" : ""}>
                 Harvest date
-                <input required type="date" />
+                <input
+                  value={values.harvestDate}
+                  onChange={(event) =>
+                    updateValue("harvestDate", event.target.value)
+                  }
+                  type="date"
+                />
+                {errors.harvestDate && (
+                  <span className="field-error">{errors.harvestDate}</span>
+                )}
               </label>
-              <label>
+              <label className={errors.region ? "field-invalid" : ""}>
                 Growing region
-                <input required placeholder="e.g. Nashik, Maharashtra" />
+                <input
+                  value={values.region}
+                  onChange={(event) =>
+                    updateValue("region", event.target.value)
+                  }
+                  placeholder="e.g. Nashik, Maharashtra"
+                />
+                {errors.region && (
+                  <span className="field-error">{errors.region}</span>
+                )}
               </label>
             </div>
           </section>

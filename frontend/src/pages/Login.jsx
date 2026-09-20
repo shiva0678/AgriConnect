@@ -1,9 +1,27 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { AuthLayout } from "./AuthLayout";
+import { validateEmail } from "../utils/formValidation";
 
 function Login() {
+  const [values, setValues] = useState({ email: "", password: "" });
+  const [errors, setErrors] = useState({});
   const [submitted, setSubmitted] = useState(false);
+
+  function updateValue(field, value) {
+    setValues((current) => ({ ...current, [field]: value }));
+    setErrors((current) => ({ ...current, [field]: "" }));
+    setSubmitted(false);
+  }
+
+  function validate() {
+    const nextErrors = {
+      email: validateEmail(values.email),
+      password: values.password ? "" : "Password is required.",
+    };
+    setErrors(nextErrors);
+    return !Object.values(nextErrors).some(Boolean);
+  }
   return (
     <AuthLayout
       label="Welcome back"
@@ -12,18 +30,18 @@ function Login() {
     >
       <form
         className="auth-form"
-        onSubmit={(event) => {
-          event.preventDefault();
-          setSubmitted(true);
-        }}
+        noValidate
+        onSubmit={(event) => { event.preventDefault(); if (validate()) setSubmitted(true); }}
       >
-        <label>
+        <label className={errors.email ? "field-invalid" : ""}>
           Email address
-          <input required type="email" placeholder="you@example.com" />
+          <input value={values.email} onChange={(event) => updateValue("email", event.target.value)} type="email" placeholder="you@example.com" />
+          {errors.email && <span className="field-error">{errors.email}</span>}
         </label>
-        <label>
+        <label className={errors.password ? "field-invalid" : ""}>
           Password
-          <input required type="password" placeholder="Enter your password" />
+          <input value={values.password} onChange={(event) => updateValue("password", event.target.value)} type="password" placeholder="Enter your password" />
+          {errors.password && <span className="field-error">{errors.password}</span>}
         </label>
         <div className="form-row">
           <label className="checkbox-label">

@@ -1,8 +1,39 @@
 import { useState } from "react";
 import { buyerProfile } from "../../data/buyerMockData";
+import { validateEmail, validateIndianPhone } from "../../utils/formValidation";
 
 function BuyerProfile() {
+  const [values, setValues] = useState({
+    name: buyerProfile.name,
+    company: buyerProfile.company,
+    phone: buyerProfile.phone,
+    email: buyerProfile.email,
+    location: buyerProfile.location,
+  });
+  const [errors, setErrors] = useState({});
   const [saved, setSaved] = useState(false);
+
+  function updateValue(field, value) {
+    setValues((current) => ({ ...current, [field]: value }));
+    setErrors((current) => ({ ...current, [field]: "" }));
+    setSaved(false);
+  }
+
+  function validate() {
+    const nextErrors = {
+      name: !values.name.trim()
+        ? "Full name is required."
+        : values.name.trim().length < 3
+          ? "Full name must be at least 3 characters."
+          : "",
+      company: values.company.trim() ? "" : "Company name is required.",
+      phone: validateIndianPhone(values.phone),
+      email: validateEmail(values.email),
+      location: values.location.trim() ? "" : "Operating region is required.",
+    };
+    setErrors(nextErrors);
+    return !Object.values(nextErrors).some(Boolean);
+  }
   return (
     <div className="farmer-page reveal-up buyer-page">
       <div className="farmer-page-heading farmer-page-heading--compact">
@@ -32,9 +63,10 @@ function BuyerProfile() {
       </section>
       <form
         className="profile-form farmer-panel"
+        noValidate
         onSubmit={(event) => {
           event.preventDefault();
-          setSaved(true);
+          if (validate()) setSaved(true);
         }}
       >
         <div className="form-panel__heading">
@@ -45,25 +77,56 @@ function BuyerProfile() {
           </div>
         </div>
         <div className="form-grid">
-          <label>
+          <label className={errors.name ? "field-invalid" : ""}>
             Full name
-            <input defaultValue={buyerProfile.name} />
+            <input
+              value={values.name}
+              onChange={(event) => updateValue("name", event.target.value)}
+            />
+            {errors.name && <span className="field-error">{errors.name}</span>}
           </label>
-          <label>
+          <label className={errors.company ? "field-invalid" : ""}>
             Company name
-            <input defaultValue={buyerProfile.company} />
+            <input
+              value={values.company}
+              onChange={(event) => updateValue("company", event.target.value)}
+            />
+            {errors.company && (
+              <span className="field-error">{errors.company}</span>
+            )}
           </label>
-          <label>
+          <label className={errors.phone ? "field-invalid" : ""}>
             Phone number
-            <input defaultValue={buyerProfile.phone} />
+            <input
+              value={values.phone}
+              onChange={(event) => updateValue("phone", event.target.value)}
+            />
+            {errors.phone && (
+              <span className="field-error">{errors.phone}</span>
+            )}
           </label>
-          <label>
+          <label className={errors.email ? "field-invalid" : ""}>
             Email address
-            <input type="email" defaultValue={buyerProfile.email} />
+            <input
+              value={values.email}
+              onChange={(event) => updateValue("email", event.target.value)}
+              type="email"
+            />
+            {errors.email && (
+              <span className="field-error">{errors.email}</span>
+            )}
           </label>
-          <label className="form-label-block form-grid__wide">
+          <label
+            className={`form-label-block form-grid__wide${errors.location ? " field-invalid" : ""}`}
+          >
             Operating region
-            <input defaultValue={buyerProfile.location} />
+            <input
+              value={values.location}
+              onChange={(event) => updateValue("location", event.target.value)}
+            />
+            {errors.location && (
+              <span className="field-error">{errors.location}</span>
+            )}
           </label>
         </div>
         <div className="profile-form__footer">

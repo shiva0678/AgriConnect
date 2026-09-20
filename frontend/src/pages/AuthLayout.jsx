@@ -1,4 +1,3 @@
-import { Link } from "react-router-dom";
 import { BrandMark } from "../components/SiteChrome";
 
 export function AuthLayout({ children, label, title, description }) {
@@ -22,9 +21,9 @@ export function AuthLayout({ children, label, title, description }) {
         </div>
       </div>
       <div className="auth-page__form">
-        <Link className="auth-mobile-brand" to="/">
+        <div className="auth-mobile-brand">
           <BrandMark />
-        </Link>
+        </div>
         <div className="auth-form__intro">
           <p className="eyebrow">{label}</p>
           <h1>{title}</h1>

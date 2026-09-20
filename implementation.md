@@ -567,6 +567,111 @@ Mobile navigation -> Buyer sidebar drawer opened successfully.
 
 No database, marketplace API, order API, authentication, JWT, or real persistence was added.
 
+---
+
+### Milestone 5: Robust Frontend Form Validation
+
+#### Objective
+
+Add clear, frontend-only validation to every form currently available in AgriConnect. Invalid submissions are blocked with inline field messages, and valid submissions show the existing temporary success states. No form calls the backend.
+
+#### Shared validation helpers
+
+Added `frontend/src/utils/formValidation.js` with reusable rules for:
+
+- Email format
+- 10-digit Indian phone numbers, including optional `+91`
+- Required text fields
+- Positive numeric values
+
+Added shared visual treatment for invalid fields and inline error messages in `frontend/src/index.css`.
+
+#### Forms updated
+
+1. **Register**
+
+- Full name required and minimum 3 characters
+- Valid email required
+- Valid 10-digit Indian phone required
+- Password required and minimum 8 characters
+- Confirm password must match
+- Farmer or Buyer role required
+
+2. **Login**
+
+- Email required
+- Valid email format
+- Password required
+
+3. **Add Crop**
+
+- Crop name required
+- Category required
+- Quantity required and greater than 0
+- Price required and greater than 0
+- Harvest date required
+- Region required
+
+4. **Edit Profile**
+
+- Farmer and buyer profile forms now validate required names, farm/company details, email, Indian phone number, and location/region.
+
+5. **Marketplace order form**
+
+- Quantity required
+- Quantity must be greater than 0
+- Quantity cannot exceed the selected crop's static available quantity
+
+#### Validation behavior
+
+- Errors render next to the relevant field.
+- Invalid fields receive a visible error border and background treatment.
+- Invalid submissions never display the success message.
+- Valid submissions display temporary success feedback.
+- No `alert()` calls were added.
+- Native browser constraints do not replace the custom messages for the order quantity boundary checks.
+
+#### Manual browser test results
+
+```text
+Register invalid empty submission -> 6 inline errors, no success state.
+Register valid submission -> "Your account details are ready. Welcome to the network."
+
+Login invalid empty submission -> 2 inline errors, no success state.
+Login valid submission -> "Thanks, your sign-in is ready for the next step."
+
+Add Crop invalid empty submission -> 6 inline errors, no success state.
+Add Crop valid submission -> "Your crop listing is ready to review."
+
+Farmer Profile invalid values -> 5 inline errors, no success state.
+Farmer Profile valid values -> "Profile changes saved for this session."
+
+Buyer Profile invalid values -> 5 inline errors, no success state.
+Buyer Profile valid values -> "Buyer profile changes saved for this session."
+
+Order quantity 0 -> "Quantity must be greater than 0."
+Order quantity above available stock -> "Quantity cannot exceed 1,200 kg available."
+Order quantity within stock -> "Your order request has been noted for this session."
+```
+
+#### Verification output
+
+```powershell
+cd frontend
+npm run build
+npm run lint
+```
+
+Result:
+
+```text
+44 modules transformed.
+Built successfully.
+No lint errors reported.
+```
+
+No backend, database, authentication, JWT, or real form persistence was added.
+
 ## 4. Current Project Structure
 
 ```text

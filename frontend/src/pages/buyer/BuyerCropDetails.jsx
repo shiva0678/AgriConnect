@@ -1,12 +1,14 @@
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { marketplaceCrops } from "../../data/buyerMockData";
+import { validatePositiveNumber } from "../../utils/formValidation";
 
 function BuyerCropDetails() {
   const { id } = useParams();
   const crop =
     marketplaceCrops.find((item) => item.id === id) || marketplaceCrops[0];
   const [quantity, setQuantity] = useState(100);
+  const [quantityError, setQuantityError] = useState("");
   const [ordered, setOrdered] = useState(false);
   return (
     <div className="farmer-page reveal-up buyer-page">
@@ -65,19 +67,34 @@ function BuyerCropDetails() {
             className="place-order"
             onSubmit={(event) => {
               event.preventDefault();
-              setOrdered(true);
+              const numericQuantity = Number(quantity);
+              const error = validatePositiveNumber(quantity, "Quantity");
+              if (!error && numericQuantity > crop.quantityValue) {
+                setQuantityError(
+                  `Quantity cannot exceed ${crop.quantityValue.toLocaleString("en-IN")} kg available.`,
+                );
+                setOrdered(false);
+                return;
+              }
+              setQuantityError(error);
+              if (!error) setOrdered(true);
             }}
           >
             <label>
               Quantity required
               <input
                 type="number"
-                min="1"
-                max={crop.quantityValue}
                 value={quantity}
-                onChange={(event) => setQuantity(event.target.value)}
+                onChange={(event) => {
+                  setQuantity(event.target.value);
+                  setQuantityError("");
+                  setOrdered(false);
+                }}
               />
               <span>kg</span>
+              {quantityError && (
+                <span className="field-error">{quantityError}</span>
+              )}
             </label>
             <div className="place-order__total">
               <span>Estimated total</span>
