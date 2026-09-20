@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { AuthLayout } from "./AuthLayout";
+import { api } from "../services/api";
 import {
   validateEmail,
   validateIndianPhone,
@@ -8,6 +9,7 @@ import {
 } from "../utils/formValidation";
 
 function Register() {
+  const navigate = useNavigate();
   const [values, setValues] = useState({
     name: "",
     email: "",
@@ -17,12 +19,15 @@ function Register() {
     role: "",
   });
   const [errors, setErrors] = useState({});
-  const [submitted, setSubmitted] = useState(false);
+  const [submitError, setSubmitError] = useState("");
+  const [submitSuccess, setSubmitSuccess] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   function updateValue(field, value) {
     setValues((current) => ({ ...current, [field]: value }));
     setErrors((current) => ({ ...current, [field]: "" }));
-    setSubmitted(false);
+    setSubmitError("");
+    setSubmitSuccess("");
   }
 
   function validate() {
@@ -50,6 +55,43 @@ function Register() {
     return !Object.values(nextErrors).some(Boolean);
   }
 
+  async function handleSubmit(event) {
+    event.preventDefault();
+    if (!validate()) return;
+
+    setIsSubmitting(true);
+    setSubmitError("");
+    setSubmitSuccess("");
+
+    try {
+      await api.post("/auth/register", {
+        name: values.name.trim(),
+        email: values.email.trim(),
+        phone: values.phone.trim(),
+        password: values.password,
+        role: values.role,
+      });
+
+      setSubmitSuccess("Registration successful. Redirecting to login...");
+      setTimeout(() => navigate("/login"), 1000);
+    } catch (error) {
+      const message =
+        error.response?.data?.message ||
+        "Registration failed. Please try again.";
+      setSubmitError(message);
+      if (error.response?.status === 400 && error.response?.data?.message) {
+        const backendMessage = error.response.data.message;
+        if (backendMessage.toLowerCase().includes("email")) {
+          setErrors((current) => ({ ...current, email: backendMessage }));
+        } else if (backendMessage.toLowerCase().includes("password")) {
+          setErrors((current) => ({ ...current, password: backendMessage }));
+        }
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
   return (
     <AuthLayout
       label="Start here"
@@ -59,10 +101,7 @@ function Register() {
       <form
         className="auth-form auth-form--register"
         noValidate
-        onSubmit={(event) => {
-          event.preventDefault();
-          if (validate()) setSubmitted(true);
-        }}
+        onSubmit={handleSubmit}
       >
         <div className="form-two-col">
           <label className={errors.name ? "field-invalid" : ""}>
@@ -158,12 +197,22 @@ function Register() {
           </div>
           {errors.role && <span className="field-error">{errors.role}</span>}
         </fieldset>
-        <button className="button button--accent button--full" type="submit">
-          Create my account <span aria-hidden="true">↗</span>
+        <button
+          className="button button--accent button--full"
+          type="submit"
+          disabled={isSubmitting}
+        >
+          {isSubmitting ? "Creating account..." : "Create my account"}{" "}
+          <span aria-hidden="true">↗</span>
         </button>
-        {submitted && (
+        {submitError && (
+          <p className="form-error" role="alert">
+            {submitError}
+          </p>
+        )}
+        {submitSuccess && (
           <p className="form-success" role="status">
-            Your account details are ready. Welcome to the network.
+            {submitSuccess}
           </p>
         )}
       </form>
