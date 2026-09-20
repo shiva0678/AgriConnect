@@ -34,7 +34,68 @@ npm run dev
 
 The API listens on `http://localhost:5000` by default. Check `GET /api/health` for the starter health response.
 
-The current frontend includes the public Home, Login, and Register pages, the static farmer workspace, and the static buyer workspace at `/buyer/dashboard`, `/buyer/marketplace`, `/buyer/crop/:id`, `/buyer/orders`, and `/buyer/profile`. The backend has a clean Express architecture with PostgreSQL connectivity, health routing, error handling, and an initial users table. Authentication, marketplace persistence, and analytics will be added in later milestones.
+## Registration API
+
+This milestone adds the first authenticated-user flow without implementing login or JWT.
+
+### POST /api/auth/register
+
+Creates a new farmer or buyer account.
+
+Request body:
+
+```json
+{
+  "name": "Test Farmer",
+  "email": "farmer@example.com",
+  "phone": "9876543210",
+  "password": "password123",
+  "role": "farmer"
+}
+```
+
+Validation rules:
+
+- all required fields must be present
+- email must match a valid format
+- phone must be a valid 10-digit mobile number
+- password must be at least 8 characters long
+- role must be either `farmer` or `buyer`
+- duplicate email addresses are rejected
+- password is never returned in the API response
+
+Success response:
+
+```json
+{
+  "success": true,
+  "message": "User registered successfully",
+  "user": {
+    "id": "uuid",
+    "name": "Test Farmer",
+    "email": "farmer@example.com",
+    "role": "farmer"
+  }
+}
+```
+
+Example error responses:
+
+```json
+{
+  "success": false,
+  "message": "Valid email format is required."
+}
+```
+
+```json
+{
+  "success": false,
+  "message": "User with this email already exists."
+}
+```
+
+The current frontend includes the public Home, Login, and Register pages, the static farmer workspace, and the static buyer workspace at `/buyer/dashboard`, `/buyer/marketplace`, `/buyer/crop/:id`, `/buyer/orders`, and `/buyer/profile`. The backend has a clean Express architecture with PostgreSQL connectivity, health routing, error handling, database initialization, and a working registration endpoint. Login/JWT and marketplace persistence will be added in later milestones.
 
 ## Configure Supabase PostgreSQL
 
