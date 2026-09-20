@@ -1,0 +1,11 @@
+@import "tailwindcss";
+
+body {
+  margin: 0;
+  min-width: 320px;
+  font-family: Georgia, 'Times New Roman', serif;
+}
+
+#root {
+  min-height: 100svh;
+}
