@@ -287,6 +287,176 @@ Register submission -> "Your account details are ready. Welcome to the network."
 
 No backend request was made by either form, as required for this milestone.
 
+---
+
+### Milestone 3: Farmer Frontend Workspace With Static Data
+
+#### Objective
+
+Complete the farmer-side frontend UI using mock data only. This milestone does not connect a database, create APIs, implement authentication, or provide real CRUD behavior.
+
+#### Routes created
+
+- `/farmer/dashboard`
+- `/farmer/crops`
+- `/farmer/add-crop`
+- `/farmer/orders`
+- `/farmer/profile`
+
+#### Work completed
+
+1. Added a reusable farmer dashboard layout.
+2. Added a desktop sidebar with farmer workspace navigation.
+3. Added a top navigation bar with current-page context, notifications placeholder, and user profile area.
+4. Added a responsive mobile navigation drawer with overlay and close behavior.
+5. Added static farmer profile, crop, order, and dashboard metric data.
+6. Added the Farmer Dashboard page.
+7. Added the My Crops page with a responsive crop table.
+8. Added the Add Crop page with a professional frontend-only form.
+9. Added the Orders page with Pending, Confirmed, Shipped, and Delivered statuses.
+10. Added the Profile page with editable-looking fields and temporary save feedback.
+11. Added responsive styling for desktop, tablet, and mobile layouts.
+
+#### Farmer dashboard contents
+
+- Welcome message for Arjun Mehta
+- Total crops metric
+- Active listings metric
+- Open orders metric
+- Revenue metric
+- Recent crop listings
+- Recent orders
+- Nashik market insight card
+- Link to add a crop
+
+#### My Crops contents
+
+The page displays mock crop rows with:
+
+- Crop name
+- Category
+- Quantity
+- Price
+- Harvest date
+- Region
+- Status
+
+It also includes static All crops, Active, and Sold tabs, a filter placeholder, and pagination controls for the UI experience.
+
+#### Add Crop contents
+
+The frontend-only form includes:
+
+- Crop name
+- Category
+- Quantity available
+- Expected price
+- Harvest date
+- Growing region
+- Description
+- Publish listing button
+- Save as draft link
+
+Submitting valid mock data displays:
+
+```text
+Your crop listing is ready to review.
+```
+
+The form does not persist data and does not call the backend.
+
+#### Orders contents
+
+The mock orders page displays buyer, crop, quantity, amount, order date, and status information. The supported statuses are:
+
+- Pending
+- Confirmed
+- Shipped
+- Delivered
+
+Each order also includes a visual progress indicator.
+
+#### Profile contents
+
+The profile page displays:
+
+- Farmer initials and profile header
+- Full name
+- Farm name
+- Phone number
+- Email address
+- Farm location
+- Member-since information
+- Change photo placeholder
+- Save changes action
+
+Submitting the profile form displays:
+
+```text
+Profile changes saved for this session.
+```
+
+This is temporary frontend feedback only.
+
+#### Reusable farmer files added
+
+- `frontend/src/components/FarmerLayout.jsx`
+- `frontend/src/data/farmerMockData.js`
+- `frontend/src/pages/farmer/FarmerDashboard.jsx`
+- `frontend/src/pages/farmer/FarmerCrops.jsx`
+- `frontend/src/pages/farmer/AddCrop.jsx`
+- `frontend/src/pages/farmer/FarmerOrders.jsx`
+- `frontend/src/pages/farmer/FarmerProfile.jsx`
+
+#### Verification output
+
+Frontend production build:
+
+```powershell
+cd frontend
+npm run build
+```
+
+Result:
+
+```text
+36 modules transformed.
+Built successfully.
+```
+
+Frontend lint:
+
+```powershell
+cd frontend
+npm run lint
+```
+
+Result:
+
+```text
+No lint errors reported.
+```
+
+Browser route verification:
+
+```text
+/farmer/dashboard -> Good morning, Arjun
+/farmer/crops     -> My crops
+/farmer/add-crop  -> List a new crop
+/farmer/orders    -> Orders
+/farmer/profile   -> Your profile
+```
+
+Browser interaction verification:
+
+```text
+Add Crop valid submission -> Your crop listing is ready to review.
+Profile submission -> Profile changes saved for this session.
+Mobile navigation -> Sidebar drawer opened successfully.
+```
+
+No database, API, authentication, or real crop/order persistence was added.
+
 ## 4. Current Project Structure
 
 ```text
