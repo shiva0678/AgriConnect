@@ -11,7 +11,7 @@ AgriConnect is an AI-powered farmer-to-buyer marketplace with price analytics.
 
 - Node.js 20 or newer
 - npm 10 or newer
-- Supabase project credentials when database features are added
+- PostgreSQL credentials when database features are added
 
 ## Run The Frontend
 
@@ -34,4 +34,4 @@ npm run dev
 
 The API listens on `http://localhost:5000` by default. Check `GET /api/health` for the starter health response.
 
-The current frontend includes the public Home, Login, and Register pages, the static farmer workspace, and the static buyer workspace at `/buyer/dashboard`, `/buyer/marketplace`, `/buyer/crop/:id`, `/buyer/orders`, and `/buyer/profile`. Authentication, database tables, marketplace persistence, and analytics will be added in later milestones.
+The current frontend includes the public Home, Login, and Register pages, the static farmer workspace, and the static buyer workspace at `/buyer/dashboard`, `/buyer/marketplace`, `/buyer/crop/:id`, `/buyer/orders`, and `/buyer/profile`. The backend has a clean Express architecture with health routing, error handling, and a deferred PostgreSQL configuration. Authentication, database tables, marketplace persistence, and analytics will be added in later milestones.

@@ -783,3 +783,130 @@ git add implementation.md README.md frontend
 git commit -m "feat: add public AgriConnect frontend pages"
 git push origin main
 ```
+
+---
+
+### Milestone 6: Clean Express Backend Architecture
+
+#### Objective
+
+Set up a maintainable Node.js and Express backend foundation without implementing authentication, database tables, Supabase, or business APIs.
+
+#### Backend structure created
+
+```text
+backend/
+|-- config/
+|   `-- db.js
+|-- controllers/
+|   `-- healthController.js
+|-- middleware/
+|   `-- errorHandler.js
+|-- routes/
+|   `-- healthRoutes.js
+|-- models/
+|   `-- .gitkeep
+|-- utils/
+|   `-- .gitkeep
+|-- .env
+|-- .env.example
+|-- server.js
+|-- package.json
+`-- package-lock.json
+```
+
+#### Backend packages configured
+
+- Node.js
+- Express
+- dotenv
+- cors
+- bcrypt
+- jsonwebtoken
+- pg
+- Nodemon for development
+
+#### Server configuration implemented
+
+- Express application setup
+- JSON request parsing
+- CORS middleware
+- Environment loading through dotenv
+- Central 404 API handler
+- Central error-handling middleware
+- Separated health controller and route
+- Lazy PostgreSQL pool factory reserved for the database milestone
+
+The PostgreSQL pool factory is not called during server startup, so this milestone does not open a database connection.
+
+#### Health endpoint
+
+`GET /api/health`
+
+Response:
+
+```json
+{
+  "success": true,
+  "message": "AgriConnect API is running"
+}
+```
+
+#### 404 response
+
+Unknown API routes return structured JSON:
+
+```json
+{
+  "success": false,
+  "message": "Route not found: GET /api/missing"
+}
+```
+
+#### Environment safety
+
+- `backend/.env` is ignored by Git through the root `.gitignore`.
+- `backend/.env.example` contains variable names with empty values only:
+
+```text
+PORT=5000
+DATABASE_URL=
+JWT_SECRET=
+```
+
+- No secret, Supabase key, JWT value, or database credential is stored in source code.
+
+#### Verification output
+
+Backend start command:
+
+```powershell
+cd backend
+npm start
+```
+
+Result:
+
+```text
+AgriConnect API listening on port 5000
+```
+
+Health test:
+
+```powershell
+Invoke-RestMethod -Uri "http://localhost:5000/api/health"
+```
+
+Result:
+
+```json
+{ "success": true, "message": "AgriConnect API is running" }
+```
+
+404 middleware test:
+
+```json
+{ "success": false, "message": "Route not found: GET /api/missing" }
+```
+
+No authentication, JWT logic, database tables, Supabase connection, or business API was added.
