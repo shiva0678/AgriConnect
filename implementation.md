@@ -457,6 +457,116 @@ Mobile navigation -> Sidebar drawer opened successfully.
 
 No database, API, authentication, or real crop/order persistence was added.
 
+---
+
+### Milestone 4: Buyer Frontend Workspace With Static Data
+
+#### Objective
+
+Complete the buyer-side frontend UI with a searchable mock marketplace, crop details, orders, and profile screens. This milestone remains frontend-only and does not connect APIs, databases, authentication, or JWT.
+
+#### Routes created
+
+- `/buyer/dashboard`
+- `/buyer/marketplace`
+- `/buyer/crop/:id`
+- `/buyer/orders`
+- `/buyer/profile`
+
+#### Work completed
+
+1. Added a reusable buyer dashboard layout with sidebar, top navigation, profile area, and mobile navigation drawer.
+2. Added static buyer profile, crop marketplace, and order mock data.
+3. Added the Buyer Dashboard page with welcome message, available crops, active orders, recent orders, and marketplace CTA.
+4. Added a professional marketplace with crop cards, search, category filter, region filter, price range control, crop imagery placeholders, farmer information, and detail links.
+5. Added the Crop Details page with farmer information, region, quantity, price, harvest date, description, quantity input, and temporary Place Order feedback.
+6. Added the Buyer Orders page with mock order cards and status badges.
+7. Added the Buyer Profile page with editable-looking buyer and company information plus temporary save feedback.
+8. Added buyer-specific responsive styles while reusing the existing AgriConnect workspace design system.
+
+#### Marketplace behavior
+
+The marketplace uses `buyerMockData.js` and filters the static crop list in the browser. Search, category, region, and price range controls update the visible crop cards without any network request.
+
+Example mock crops include:
+
+- Tomatoes
+- Red Onions
+- Alphonso Mangoes
+- Green Chilli
+- Pearl Millet
+- Turmeric
+
+#### Crop details behavior
+
+Each crop card links to `/buyer/crop/:id`. The detail page shows the selected mock crop and calculates an estimated order total from the entered quantity and static price. Submitting the form displays:
+
+```text
+Your order request has been noted for this session.
+```
+
+No order is persisted or sent to the backend.
+
+#### Reusable buyer files added
+
+- `frontend/src/components/BuyerLayout.jsx`
+- `frontend/src/data/buyerMockData.js`
+- `frontend/src/pages/buyer/BuyerDashboard.jsx`
+- `frontend/src/pages/buyer/BuyerMarketplace.jsx`
+- `frontend/src/pages/buyer/BuyerCropDetails.jsx`
+- `frontend/src/pages/buyer/BuyerOrders.jsx`
+- `frontend/src/pages/buyer/BuyerProfile.jsx`
+
+#### Verification output
+
+Frontend production build:
+
+```powershell
+cd frontend
+npm run build
+```
+
+Result:
+
+```text
+43 modules transformed.
+Built successfully.
+```
+
+Frontend lint:
+
+```powershell
+cd frontend
+npm run lint
+```
+
+Result:
+
+```text
+No lint errors reported.
+```
+
+Browser route verification:
+
+```text
+/buyer/dashboard       -> Good morning, Maya
+/buyer/marketplace     -> Marketplace
+/buyer/crop/CR-1048    -> Tomatoes
+/buyer/orders          -> My orders
+/buyer/profile         -> Your profile
+```
+
+Browser interaction verification:
+
+```text
+Marketplace search "Mango" -> 6 cards reduced to 1 matching card.
+Place order submission -> Your order request has been noted for this session.
+Profile submission -> Buyer profile changes saved for this session.
+Mobile navigation -> Buyer sidebar drawer opened successfully.
+```
+
+No database, marketplace API, order API, authentication, JWT, or real persistence was added.
+
 ## 4. Current Project Structure
 
 ```text

@@ -34,4 +34,4 @@ npm run dev
 
 The API listens on `http://localhost:5000` by default. Check `GET /api/health` for the starter health response.
 
-The current frontend includes the public Home, Login, and Register pages plus the static farmer workspace at `/farmer/dashboard`, `/farmer/crops`, `/farmer/add-crop`, `/farmer/orders`, and `/farmer/profile`. Authentication, database tables, marketplace persistence, and analytics will be added in later milestones.
+The current frontend includes the public Home, Login, and Register pages, the static farmer workspace, and the static buyer workspace at `/buyer/dashboard`, `/buyer/marketplace`, `/buyer/crop/:id`, `/buyer/orders`, and `/buyer/profile`. Authentication, database tables, marketplace persistence, and analytics will be added in later milestones.

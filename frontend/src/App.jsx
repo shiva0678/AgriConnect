@@ -9,6 +9,12 @@ import FarmerCrops from "./pages/farmer/FarmerCrops";
 import AddCrop from "./pages/farmer/AddCrop";
 import FarmerOrders from "./pages/farmer/FarmerOrders";
 import FarmerProfile from "./pages/farmer/FarmerProfile";
+import BuyerLayout from "./components/BuyerLayout";
+import BuyerDashboard from "./pages/buyer/BuyerDashboard";
+import BuyerMarketplace from "./pages/buyer/BuyerMarketplace";
+import BuyerCropDetails from "./pages/buyer/BuyerCropDetails";
+import BuyerOrders from "./pages/buyer/BuyerOrders";
+import BuyerProfile from "./pages/buyer/BuyerProfile";
 
 function PublicLayout({ children }) {
   return (
@@ -55,6 +61,14 @@ function App() {
           <Route path="add-crop" element={<AddCrop />} />
           <Route path="orders" element={<FarmerOrders />} />
           <Route path="profile" element={<FarmerProfile />} />
+        </Route>
+        <Route path="/buyer" element={<BuyerLayout />}>
+          <Route index element={<BuyerDashboard />} />
+          <Route path="dashboard" element={<BuyerDashboard />} />
+          <Route path="marketplace" element={<BuyerMarketplace />} />
+          <Route path="crop/:id" element={<BuyerCropDetails />} />
+          <Route path="orders" element={<BuyerOrders />} />
+          <Route path="profile" element={<BuyerProfile />} />
         </Route>
       </Routes>
     </BrowserRouter>
