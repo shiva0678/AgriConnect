@@ -1,4 +1,5 @@
-import { Link, NavLink } from "react-router-dom";
+import { Link, NavLink, useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 
 export function BrandMark({ inverse = false }) {
   return (
@@ -17,6 +18,14 @@ export function BrandMark({ inverse = false }) {
 }
 
 export function PublicHeader() {
+  const navigate = useNavigate();
+  const { user, isAuthenticated, logout } = useAuth();
+
+  function handleLogout() {
+    logout();
+    navigate("/login");
+  }
+
   return (
     <header className="site-header">
       <div className="page-width site-header__inner">
@@ -38,12 +47,39 @@ export function PublicHeader() {
           </a>
         </nav>
         <div className="header-actions">
-          <Link className="text-link" to="/login">
-            Log in
-          </Link>
-          <Link className="button button--small button--dark" to="/register">
-            Join AgriConnect <span aria-hidden="true">↗</span>
-          </Link>
+          {isAuthenticated ? (
+            <>
+              <Link
+                className="text-link"
+                to={
+                  user?.role === "farmer"
+                    ? "/farmer/dashboard"
+                    : "/buyer/dashboard"
+                }
+              >
+                Dashboard
+              </Link>
+              <button
+                className="button button--small button--dark"
+                type="button"
+                onClick={handleLogout}
+              >
+                Log out
+              </button>
+            </>
+          ) : (
+            <>
+              <Link className="text-link" to="/login">
+                Log in
+              </Link>
+              <Link
+                className="button button--small button--dark"
+                to="/register"
+              >
+                Join AgriConnect <span aria-hidden="true">↗</span>
+              </Link>
+            </>
+          )}
         </div>
       </div>
     </header>

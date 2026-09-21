@@ -1,4 +1,9 @@
 import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { AuthProvider } from "./context/AuthContext";
+import {
+  ProtectedRoute,
+  RoleProtectedRoute,
+} from "./components/ProtectedRoute";
 import { PublicFooter, PublicHeader } from "./components/SiteChrome";
 import FarmerLayout from "./components/FarmerLayout";
 import Home from "./pages/Home";
@@ -28,50 +33,66 @@ function PublicLayout({ children }) {
 
 function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route
-          path="/"
-          element={
-            <PublicLayout>
-              <Home />
-            </PublicLayout>
-          }
-        />
-        <Route
-          path="/login"
-          element={
-            <PublicLayout>
-              <Login />
-            </PublicLayout>
-          }
-        />
-        <Route
-          path="/register"
-          element={
-            <PublicLayout>
-              <Register />
-            </PublicLayout>
-          }
-        />
-        <Route path="/farmer" element={<FarmerLayout />}>
-          <Route index element={<FarmerDashboard />} />
-          <Route path="dashboard" element={<FarmerDashboard />} />
-          <Route path="crops" element={<FarmerCrops />} />
-          <Route path="add-crop" element={<AddCrop />} />
-          <Route path="orders" element={<FarmerOrders />} />
-          <Route path="profile" element={<FarmerProfile />} />
-        </Route>
-        <Route path="/buyer" element={<BuyerLayout />}>
-          <Route index element={<BuyerDashboard />} />
-          <Route path="dashboard" element={<BuyerDashboard />} />
-          <Route path="marketplace" element={<BuyerMarketplace />} />
-          <Route path="crop/:id" element={<BuyerCropDetails />} />
-          <Route path="orders" element={<BuyerOrders />} />
-          <Route path="profile" element={<BuyerProfile />} />
-        </Route>
-      </Routes>
-    </BrowserRouter>
+    <AuthProvider>
+      <BrowserRouter>
+        <Routes>
+          <Route
+            path="/"
+            element={
+              <PublicLayout>
+                <Home />
+              </PublicLayout>
+            }
+          />
+          <Route
+            path="/login"
+            element={
+              <PublicLayout>
+                <Login />
+              </PublicLayout>
+            }
+          />
+          <Route
+            path="/register"
+            element={
+              <PublicLayout>
+                <Register />
+              </PublicLayout>
+            }
+          />
+          <Route
+            path="/farmer"
+            element={
+              <ProtectedRoute allowedRoles={["farmer"]}>
+                <FarmerLayout />
+              </ProtectedRoute>
+            }
+          >
+            <Route index element={<FarmerDashboard />} />
+            <Route path="dashboard" element={<FarmerDashboard />} />
+            <Route path="crops" element={<FarmerCrops />} />
+            <Route path="add-crop" element={<AddCrop />} />
+            <Route path="orders" element={<FarmerOrders />} />
+            <Route path="profile" element={<FarmerProfile />} />
+          </Route>
+          <Route
+            path="/buyer"
+            element={
+              <ProtectedRoute allowedRoles={["buyer"]}>
+                <BuyerLayout />
+              </ProtectedRoute>
+            }
+          >
+            <Route index element={<BuyerDashboard />} />
+            <Route path="dashboard" element={<BuyerDashboard />} />
+            <Route path="marketplace" element={<BuyerMarketplace />} />
+            <Route path="crop/:id" element={<BuyerCropDetails />} />
+            <Route path="orders" element={<BuyerOrders />} />
+            <Route path="profile" element={<BuyerProfile />} />
+          </Route>
+        </Routes>
+      </BrowserRouter>
+    </AuthProvider>
   );
 }
 

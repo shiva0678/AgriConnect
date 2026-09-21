@@ -1,11 +1,13 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { AuthLayout } from "./AuthLayout";
-import { api, setAuthToken, setStoredUser } from "../services/api";
+import { useAuth } from "../context/AuthContext";
+import { api } from "../services/api";
 import { validateEmail } from "../utils/formValidation";
 
 function Login() {
   const navigate = useNavigate();
+  const { login } = useAuth();
   const [values, setValues] = useState({ email: "", password: "" });
   const [errors, setErrors] = useState({});
   const [submitError, setSubmitError] = useState("");
@@ -43,14 +45,13 @@ function Login() {
       });
 
       const { token, user } = response.data;
-      setAuthToken(token);
-      setStoredUser(user);
+      login({ userData: user, authToken: token });
       setSubmitSuccess("Login successful. Redirecting...");
 
       if (user.role === "farmer") {
-        navigate("/farmer/dashboard");
+        navigate("/farmer/dashboard", { replace: true });
       } else {
-        navigate("/buyer/dashboard");
+        navigate("/buyer/dashboard", { replace: true });
       }
     } catch (error) {
       const message =

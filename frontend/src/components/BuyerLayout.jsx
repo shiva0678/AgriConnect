@@ -1,6 +1,13 @@
 import { useState } from "react";
-import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
+import {
+  Link,
+  NavLink,
+  Outlet,
+  useLocation,
+  useNavigate,
+} from "react-router-dom";
 import { BrandMark } from "./SiteChrome";
+import { useAuth } from "../context/AuthContext";
 import { buyerProfile } from "../data/buyerMockData";
 
 const navigation = [
@@ -13,12 +20,19 @@ const navigation = [
 function BuyerLayout() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user, logout } = useAuth();
   const current = navigation.find((item) =>
     location.pathname.startsWith(item.to),
   );
   const pageTitle = location.pathname.includes("/crop/")
     ? "Crop details"
     : current?.label || "Overview";
+
+  function handleLogout() {
+    logout();
+    navigate("/login");
+  }
 
   return (
     <div className="farmer-shell buyer-shell">
@@ -86,14 +100,21 @@ function BuyerLayout() {
             </button>
             <Link className="farmer-user" to="/buyer/profile">
               <span className="avatar avatar--small avatar--buyer">
-                {buyerProfile.initials}
+                {user?.name?.charAt(0)?.toUpperCase() || buyerProfile.initials}
               </span>
               <span>
-                <strong>{buyerProfile.name}</strong>
+                <strong>{user?.name || buyerProfile.name}</strong>
                 <small>Buyer</small>
               </span>
               <b>⌄</b>
             </Link>
+            <button
+              className="button button--small button--dark"
+              type="button"
+              onClick={handleLogout}
+            >
+              Log out
+            </button>
           </div>
         </header>
         <main className="farmer-content">

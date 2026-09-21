@@ -1,19 +1,98 @@
 # AgriConnect
 
-AgriConnect is an AI-powered farmer-to-buyer marketplace with price analytics.
+AgriConnect is a farmer-to-buyer marketplace platform designed to connect agricultural producers and buyers in a simpler, more transparent workflow. Phase 1 focuses on the authenticated user journey, dashboard entry points, and a working frontend-backend integration without adding crop/order workflows, analytics, or AI features.
 
-## Project Structure
+## Project overview
 
-- `frontend/`: React application built with Vite and Tailwind CSS.
-- `backend/`: Node.js and Express API service.
+This first phase covers the foundation of the product:
 
-## Prerequisites
+- public marketing and landing pages
+- login and registration screens
+- backend authentication API
+- PostgreSQL persistence for users
+- JWT-based protected routes
+- farmer and buyer dashboard role separation
+- role-based route protection
+- secure password handling with bcrypt
+- logout state reset and session restore on refresh
 
-- Node.js 20 or newer
-- npm 10 or newer
-- PostgreSQL credentials when database features are added
+## Features completed in Phase 1
 
-## Run The Frontend
+### Frontend
+
+- landing page and public navigation
+- login page with validation and loading states
+- register page with validation and duplicate-check handling
+- farmer dashboard pages
+- buyer dashboard pages
+- protected route guarding
+- role-based route restriction
+- logout and session persistence
+- responsive dashboard layout
+
+### Backend
+
+- Express API setup
+- PostgreSQL connection and health check
+- Supabase database configuration
+- initial users table creation
+- user registration API
+- login API with JWT issuance
+- protected authenticated user route
+- JWT verification middleware
+- bcrypt password hashing
+- duplicate email handling
+- safe user responses without password leakage
+
+## Tech stack
+
+### Frontend
+
+- React
+- Vite
+- React Router
+- Axios
+- CSS-based layouts with responsive dashboard styling
+
+### Backend
+
+- Node.js
+- Express
+- PostgreSQL via pg
+- Supabase
+- bcrypt
+- JWT
+- dotenv
+
+## Project structure
+
+```text
+AgriConnect/
+├─ backend/
+│  ├─ config/
+│  ├─ controllers/
+│  ├─ middleware/
+│  ├─ models/
+│  ├─ routes/
+│  ├─ tests/
+│  ├─ utils/
+│  ├─ .env.example
+│  ├─ .env
+│  ├─ package.json
+│  ├─ server.js
+│  └─ swagger.js
+├─ frontend/
+│  ├─ src/
+│  ├─ package.json
+│  ├─ vite.config.js
+│  └─ index.html
+├─ .gitignore
+├─ README.md
+├─ implementation.md
+└─ .env.example
+```
+
+## Frontend setup
 
 ```bash
 cd frontend
@@ -21,9 +100,9 @@ npm install
 npm run dev
 ```
 
-The Vite development server prints its local URL, normally `http://localhost:5173`.
+The UI runs on the Vite dev server, usually on `http://localhost:5173`.
 
-## Run The Backend
+## Backend setup
 
 ```bash
 cd backend
@@ -32,17 +111,58 @@ copy .env.example .env
 npm run dev
 ```
 
-The API listens on `http://localhost:5000` by default. Check `GET /api/health` for the starter health response.
+The backend normally runs on `http://localhost:5000`.
 
-## Registration API
+## Supabase setup instructions
 
-This milestone adds the first authenticated-user flow without implementing login or JWT.
+1. Create a Supabase project.
+2. Open the project dashboard.
+3. Go to Project Settings → Database.
+4. Copy the PostgreSQL connection string.
+5. Add it to `backend/.env`.
 
-### POST /api/auth/register
+Example:
 
-Creates a new farmer or buyer account.
+```env
+PORT=5000
+DATABASE_URL=postgresql://user:password@host:5432/postgres
+JWT_SECRET=your_secure_jwt_secret
+```
 
-Request body:
+Important:
+
+- never commit `.env`
+- keep secrets out of source control
+- use `.env.example` as the safe template only
+
+## Environment variables
+
+```env
+PORT=5000
+DATABASE_URL=your_private_supabase_postgresql_uri
+JWT_SECRET=your_generated_jwt_secret
+```
+
+## API endpoints
+
+### Health
+
+```http
+GET /api/health
+GET /api/health/db
+```
+
+### Authentication
+
+```http
+POST /api/auth/register
+POST /api/auth/login
+GET /api/auth/me
+```
+
+### Auth request examples
+
+Register:
 
 ```json
 {
@@ -54,54 +174,7 @@ Request body:
 }
 ```
 
-Validation rules:
-
-- all required fields must be present
-- email must match a valid format
-- phone must be a valid 10-digit mobile number
-- password must be at least 8 characters long
-- role must be either `farmer` or `buyer`
-- duplicate email addresses are rejected
-- password is never returned in the API response
-
-Success response:
-
-```json
-{
-  "success": true,
-  "message": "User registered successfully",
-  "user": {
-    "id": "uuid",
-    "name": "Test Farmer",
-    "email": "farmer@example.com",
-    "role": "farmer"
-  }
-}
-```
-
-Example error responses:
-
-```json
-{
-  "success": false,
-  "message": "Valid email format is required."
-}
-```
-
-```json
-{
-  "success": false,
-  "message": "User with this email already exists."
-}
-```
-
-## Login API
-
-### POST /api/auth/login
-
-Authenticates a user by email and password and returns a JWT token.
-
-Request body:
+Login:
 
 ```json
 {
@@ -110,69 +183,65 @@ Request body:
 }
 ```
 
-Success response:
-
-```json
-{
-  "success": true,
-  "message": "Login successful",
-  "token": "jwt_token_here",
-  "user": {
-    "id": "uuid",
-    "name": "Test Farmer",
-    "email": "farmer@example.com",
-    "role": "farmer"
-  }
-}
-```
-
-The API returns `401` for invalid credentials and never exposes the password or password hash.
-
-## Protected route
-
-### GET /api/auth/me
-
-Requires a Bearer token in the `Authorization` header:
+Protected route header:
 
 ```http
 Authorization: Bearer <jwt_token>
 ```
 
-Success response:
+## How to run the project
 
-```json
-{
-  "success": true,
-  "user": {
-    "id": "uuid",
-    "name": "Test Farmer",
-    "email": "farmer@example.com",
-    "role": "farmer"
-  }
-}
-```
+### Start backend
 
-Missing or invalid tokens return `401`.
-
-The current frontend includes the public Home, Login, and Register pages, the static farmer workspace, and the static buyer workspace at `/buyer/dashboard`, `/buyer/marketplace`, `/buyer/crop/:id`, `/buyer/orders`, and `/buyer/profile`. The backend has a clean Express architecture with PostgreSQL connectivity, health routing, error handling, database initialization, working registration, and JWT-based login middleware. Crop/order APIs and full authorization rules are deferred to later milestones.
-
-## Configure Supabase PostgreSQL
-
-Copy the environment template inside `backend/`:
-
-```powershell
+```bash
 cd backend
-copy .env.example .env
+npm start
 ```
 
-Set `DATABASE_URL` in `backend/.env` to the PostgreSQL URI from **Supabase Dashboard → Project Settings → Database → Connection string**. Use the Session Pooler URI when running from a local development machine if Supabase recommends it for your project.
+### Start frontend
 
-```env
-PORT=5000
-DATABASE_URL=your_private_supabase_postgresql_uri
-JWT_SECRET=
+```bash
+cd frontend
+npm run dev
 ```
 
-Do not paste credentials into source files, documentation, screenshots, or Git. The root `.gitignore` excludes `backend/.env`. The `.env.example` file contains variable names only and must not contain real credentials.
+### Swagger docs
 
-The backend tests the connection during startup and initializes the `users` table. Check `GET http://localhost:5000/api/health/db` after starting the server.
+The API docs are available at:
+
+```text
+http://localhost:5000/api/docs
+```
+
+## Phase 1 limitations
+
+The following items are intentionally not included in this phase and are deferred to later milestones:
+
+- AI chatbot
+- analytics dashboard
+- wastage alerts
+- fair-price indicator
+- full crop CRUD
+- full order CRUD
+- real marketplace pricing engine
+- RAG and LLM integration
+- government scheme matching
+
+## Future Phase 2/3 features
+
+Planned next milestones include:
+
+- crop management flows
+- buyer marketplace interactions
+- order workflows
+- farm data and lifecycle management
+- recommendations and pricing intelligence
+- AI-powered buyer/seller assistance
+- expanded analytics and reporting
+
+## Notes
+
+- user passwords are stored as bcrypt hashes, never plaintext
+- `.env` is ignored by Git
+- `.env.example` exists at `backend/.env.example`
+- the project currently focuses on the authentication and protected dashboard foundation only

@@ -1,6 +1,13 @@
 import { useState } from "react";
-import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
+import {
+  Link,
+  NavLink,
+  Outlet,
+  useLocation,
+  useNavigate,
+} from "react-router-dom";
 import { BrandMark } from "./SiteChrome";
+import { useAuth } from "../context/AuthContext";
 import { farmerProfile } from "../data/farmerMockData";
 
 const navigation = [
@@ -13,12 +20,19 @@ const navigation = [
 function FarmerLayout() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user, logout } = useAuth();
   const current = navigation.find((item) =>
     location.pathname.startsWith(item.to),
   );
   const pageTitle = location.pathname.endsWith("/add-crop")
     ? "Add a crop"
     : current?.label || "Overview";
+
+  function handleLogout() {
+    logout();
+    navigate("/login");
+  }
 
   return (
     <div className="farmer-shell">
@@ -86,14 +100,21 @@ function FarmerLayout() {
             </button>
             <Link className="farmer-user" to="/farmer/profile">
               <span className="avatar avatar--small">
-                {farmerProfile.initials}
+                {user?.name?.charAt(0)?.toUpperCase() || farmerProfile.initials}
               </span>
               <span>
-                <strong>{farmerProfile.name}</strong>
+                <strong>{user?.name || farmerProfile.name}</strong>
                 <small>Farmer</small>
               </span>
               <b>⌄</b>
             </Link>
+            <button
+              className="button button--small button--dark"
+              type="button"
+              onClick={handleLogout}
+            >
+              Log out
+            </button>
           </div>
         </header>
         <main className="farmer-content">
