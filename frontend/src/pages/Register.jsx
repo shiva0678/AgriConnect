@@ -1,65 +1,55 @@
-import { useState } from "react";
+import { useId, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { useForm, useWatch } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { AuthLayout } from "./AuthLayout";
 import { api } from "../services/api";
-import {
-  validateEmail,
-  validateIndianPhone,
-  validateRequired,
-} from "../utils/formValidation";
+import { registerSchema } from "../schemas/authSchemas";
+import { getApiErrorMessage } from "../utils/apiErrorMessage";
 
 function Register() {
   const navigate = useNavigate();
-  const [values, setValues] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    password: "",
-    confirmPassword: "",
-    role: "",
-  });
-  const [errors, setErrors] = useState({});
+  const nameId = useId();
+  const phoneId = useId();
+  const emailId = useId();
+  const passwordId = useId();
+  const confirmPasswordId = useId();
   const [submitError, setSubmitError] = useState("");
   const [submitSuccess, setSubmitSuccess] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const {
+    register,
+    handleSubmit,
+    control,
+    setError,
+    formState: { errors, isSubmitting },
+  } = useForm({
+    resolver: zodResolver(registerSchema),
+    defaultValues: {
+      name: "",
+      email: "",
+      phone: "",
+      password: "",
+      confirmPassword: "",
+      role: "",
+    },
+  });
+  const password = useWatch({ control, name: "password", defaultValue: "" });
 
-  function updateValue(field, value) {
-    setValues((current) => ({ ...current, [field]: value }));
-    setErrors((current) => ({ ...current, [field]: "" }));
-    setSubmitError("");
-    setSubmitSuccess("");
-  }
+  const passwordStrength = useMemo(() => {
+    if (!password) return { label: "No password yet", score: 0 };
+    let score = 0;
+    if (password.length >= 8) score += 1;
+    if (/[a-z]/.test(password) && /[A-Z]/.test(password)) score += 1;
+    if (/\d/.test(password)) score += 1;
+    if (/[^A-Za-z0-9]/.test(password)) score += 1;
 
-  function validate() {
-    const nextErrors = {
-      name: validateRequired(values.name, "Full name"),
-      email: validateEmail(values.email),
-      phone: validateIndianPhone(values.phone),
-      password: !values.password
-        ? "Password is required."
-        : values.password.length < 8
-          ? "Password must be at least 8 characters."
-          : "",
-      confirmPassword:
-        values.confirmPassword !== values.password
-          ? "Passwords do not match."
-          : "",
-      role: values.role ? "" : "Choose Farmer or Buyer.",
-    };
-    if (!values.name.trim()) nextErrors.name = "Full name is required.";
-    else if (values.name.trim().length < 3)
-      nextErrors.name = "Full name must be at least 3 characters.";
-    if (!values.confirmPassword)
-      nextErrors.confirmPassword = "Please confirm your password.";
-    setErrors(nextErrors);
-    return !Object.values(nextErrors).some(Boolean);
-  }
+    if (score <= 1) return { label: "Weak", score: 1, tone: "weak" };
+    if (score === 2) return { label: "Moderate", score: 2, tone: "medium" };
+    if (score === 3) return { label: "Strong", score: 3, tone: "strong" };
+    return { label: "Very strong", score: 4, tone: "very-strong" };
+  }, [password]);
 
-  async function handleSubmit(event) {
-    event.preventDefault();
-    if (!validate()) return;
-
-    setIsSubmitting(true);
+  async function handleRegistration(values) {
     setSubmitError("");
     setSubmitSuccess("");
 
@@ -75,20 +65,24 @@ function Register() {
       setSubmitSuccess("Registration successful. Redirecting to login...");
       setTimeout(() => navigate("/login"), 1000);
     } catch (error) {
-      const message =
-        error.response?.data?.message ||
-        "Registration failed. Please try again.";
-      setSubmitError(message);
+      const message = getApiErrorMessage(
+        error,
+        "Registration failed. Please try again.",
+      );
       if (error.response?.status === 400 && error.response?.data?.message) {
         const backendMessage = error.response.data.message;
         if (backendMessage.toLowerCase().includes("email")) {
-          setErrors((current) => ({ ...current, email: backendMessage }));
+          setError("email", { type: "server", message: backendMessage });
+        } else if (backendMessage.toLowerCase().includes("phone")) {
+          setError("phone", { type: "server", message: backendMessage });
         } else if (backendMessage.toLowerCase().includes("password")) {
-          setErrors((current) => ({ ...current, password: backendMessage }));
+          setError("password", { type: "server", message: backendMessage });
+        } else {
+          setSubmitError(message);
         }
+      } else {
+        setSubmitError(message);
       }
-    } finally {
-      setIsSubmitting(false);
     }
   }
 
@@ -101,80 +95,161 @@ function Register() {
       <form
         className="auth-form auth-form--register"
         noValidate
-        onSubmit={handleSubmit}
+        onSubmit={handleSubmit(handleRegistration)}
+        onChange={() => {
+          setSubmitError("");
+          setSubmitSuccess("");
+        }}
       >
         <div className="form-two-col">
-          <label className={errors.name ? "field-invalid" : ""}>
+          <label
+            className={errors.name ? "field-invalid" : ""}
+            htmlFor={`${nameId}-name`}
+          >
             Full name
             <input
-              value={values.name}
-              onChange={(event) => updateValue("name", event.target.value)}
+              id={`${nameId}-name`}
+              aria-invalid={Boolean(errors.name)}
+              aria-describedby={
+                errors.name ? `${nameId}-name-error` : undefined
+              }
               type="text"
               placeholder="Your full name"
+              autoComplete="name"
+              {...register("name")}
             />
-            {errors.name && <span className="field-error">{errors.name}</span>}
+            {errors.name && (
+              <span className="field-error" id={`${nameId}-name-error`}>
+                {errors.name.message}
+              </span>
+            )}
           </label>
-          <label className={errors.phone ? "field-invalid" : ""}>
+          <label
+            className={errors.phone ? "field-invalid" : ""}
+            htmlFor={`${phoneId}-phone`}
+          >
             Phone number
             <input
-              value={values.phone}
-              onChange={(event) => updateValue("phone", event.target.value)}
+              id={`${phoneId}-phone`}
               type="tel"
-              placeholder="+91 00000 00000"
+              placeholder="00000 00000"
+              autoComplete="tel"
+              aria-invalid={Boolean(errors.phone)}
+              aria-describedby={
+                errors.phone ? `${phoneId}-phone-error` : undefined
+              }
+              {...register("phone")}
             />
             {errors.phone && (
-              <span className="field-error">{errors.phone}</span>
+              <span className="field-error" id={`${phoneId}-phone-error`}>
+                {errors.phone.message}
+              </span>
             )}
           </label>
         </div>
-        <label className={errors.email ? "field-invalid" : ""}>
+        <label
+          className={errors.email ? "field-invalid" : ""}
+          htmlFor={`${emailId}-email`}
+        >
           Email address
           <input
-            value={values.email}
-            onChange={(event) => updateValue("email", event.target.value)}
+            id={`${emailId}-email`}
+            aria-invalid={Boolean(errors.email)}
+            aria-describedby={
+              errors.email ? `${emailId}-email-error` : undefined
+            }
             type="email"
             placeholder="you@example.com"
+            autoComplete="email"
+            {...register("email")}
           />
-          {errors.email && <span className="field-error">{errors.email}</span>}
+          {errors.email && (
+            <span className="field-error" id={`${emailId}-email-error`}>
+              {errors.email.message}
+            </span>
+          )}
         </label>
         <div className="form-two-col">
-          <label className={errors.password ? "field-invalid" : ""}>
+          <label
+            className={errors.password ? "field-invalid" : ""}
+            htmlFor={`${passwordId}-password`}
+          >
             Password
             <input
-              value={values.password}
-              onChange={(event) => updateValue("password", event.target.value)}
+              id={`${passwordId}-password`}
+              aria-invalid={Boolean(errors.password)}
+              aria-describedby={
+                errors.password ? `${passwordId}-password-error` : undefined
+              }
               type="password"
               placeholder="Minimum 8 characters"
+              autoComplete="new-password"
+              {...register("password")}
             />
             {errors.password && (
-              <span className="field-error">{errors.password}</span>
+              <span className="field-error" id={`${passwordId}-password-error`}>
+                {errors.password.message}
+              </span>
             )}
           </label>
-          <label className={errors.confirmPassword ? "field-invalid" : ""}>
+          <label
+            className={errors.confirmPassword ? "field-invalid" : ""}
+            htmlFor={`${confirmPasswordId}-confirm`}
+          >
             Confirm password
             <input
-              value={values.confirmPassword}
-              onChange={(event) =>
-                updateValue("confirmPassword", event.target.value)
+              id={`${confirmPasswordId}-confirm`}
+              aria-invalid={Boolean(errors.confirmPassword)}
+              aria-describedby={
+                errors.confirmPassword
+                  ? `${confirmPasswordId}-confirm-error`
+                  : undefined
               }
               type="password"
               placeholder="Repeat password"
+              autoComplete="new-password"
+              {...register("confirmPassword")}
             />
             {errors.confirmPassword && (
-              <span className="field-error">{errors.confirmPassword}</span>
+              <span
+                className="field-error"
+                id={`${confirmPasswordId}-confirm-error`}
+              >
+                {errors.confirmPassword.message}
+              </span>
             )}
           </label>
+        </div>
+        <div className="password-strength" aria-live="polite">
+          <div className="password-strength__meta">
+            <span>Password strength</span>
+            <strong>{passwordStrength.label}</strong>
+          </div>
+          <div className="password-strength__bars" aria-hidden="true">
+            {[1, 2, 3, 4].map((step) => (
+              <span
+                key={step}
+                className={
+                  step <= passwordStrength.score
+                    ? `is-${passwordStrength.tone || "empty"}`
+                    : ""
+                }
+              />
+            ))}
+          </div>
         </div>
         <fieldset className={errors.role ? "field-invalid" : ""}>
           <legend>I am joining as a</legend>
           <div className="role-options">
             <label>
               <input
-                checked={values.role === "farmer"}
-                onChange={(event) => updateValue("role", event.target.value)}
-                name="role"
                 type="radio"
                 value="farmer"
+                aria-invalid={Boolean(errors.role)}
+                aria-describedby={
+                  errors.role ? `${emailId}-role-error` : undefined
+                }
+                {...register("role")}
               />
               <span>
                 <strong>Farmer</strong>
@@ -183,11 +258,13 @@ function Register() {
             </label>
             <label>
               <input
-                checked={values.role === "buyer"}
-                onChange={(event) => updateValue("role", event.target.value)}
-                name="role"
                 type="radio"
                 value="buyer"
+                aria-invalid={Boolean(errors.role)}
+                aria-describedby={
+                  errors.role ? `${emailId}-role-error` : undefined
+                }
+                {...register("role")}
               />
               <span>
                 <strong>Buyer</strong>
@@ -195,7 +272,11 @@ function Register() {
               </span>
             </label>
           </div>
-          {errors.role && <span className="field-error">{errors.role}</span>}
+          {errors.role && (
+            <span className="field-error" id={`${emailId}-role-error`}>
+              {errors.role.message}
+            </span>
+          )}
         </fieldset>
         <button
           className="button button--accent button--full"

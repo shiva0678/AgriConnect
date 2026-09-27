@@ -1,8 +1,34 @@
-import { farmerOrders } from "../../data/farmerMockData";
+import { m } from "framer-motion";
+import { useFarmerOrdersQuery } from "../../queries/orders";
 
 const statuses = ["All orders", "Pending", "Confirmed", "Shipped", "Delivered"];
 
 function FarmerOrders() {
+  const {
+    data: farmerOrders = [],
+    isLoading,
+    isError,
+    error,
+  } = useFarmerOrdersQuery();
+
+  if (isLoading) {
+    return (
+      <div className="farmer-page reveal-up">
+        <div className="page-loading">Loading orders…</div>
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="farmer-page reveal-up">
+        <div className="form-error" role="alert">
+          Unable to load orders. {error?.message || "Please try again."}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="farmer-page reveal-up">
       <div className="farmer-page-heading">
@@ -36,9 +62,22 @@ function FarmerOrders() {
           ⌘ Filter <span>⌄</span>
         </button>
       </div>
-      <div className="orders-cards">
+      <m.div
+        className="orders-cards"
+        initial="hidden"
+        animate="visible"
+        variants={{ visible: { transition: { staggerChildren: 0.055 } } }}
+      >
         {farmerOrders.map((order) => (
-          <article className="order-card" key={order.id}>
+          <m.article
+            className="order-card"
+            key={order.id}
+            variants={{
+              hidden: { opacity: 0, y: 8 },
+              visible: { opacity: 1, y: 0 },
+            }}
+            transition={{ duration: 0.28, ease: "easeOut" }}
+          >
             <div className="order-card__top">
               <span className="buyer-avatar buyer-avatar--large">
                 {order.initials}
@@ -93,9 +132,9 @@ function FarmerOrders() {
                 Delivered
               </span>
             </div>
-          </article>
+          </m.article>
         ))}
-      </div>
+      </m.div>
     </div>
   );
 }

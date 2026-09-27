@@ -1,38 +1,29 @@
-import { useState } from "react";
+import { useId, useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { farmerProfile } from "../../data/farmerMockData";
-import { validateEmail, validateIndianPhone } from "../../utils/formValidation";
+import { farmerProfileSchema } from "../../schemas/profileSchemas";
 
 function FarmerProfile() {
-  const [values, setValues] = useState({
-    name: farmerProfile.name,
-    farm: farmerProfile.farm,
-    phone: farmerProfile.phone,
-    email: farmerProfile.email,
-    location: farmerProfile.location,
-  });
-  const [errors, setErrors] = useState({});
+  const formId = useId();
   const [saved, setSaved] = useState(false);
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm({
+    resolver: zodResolver(farmerProfileSchema),
+    defaultValues: {
+      name: farmerProfile.name,
+      farm: farmerProfile.farm,
+      phone: farmerProfile.phone,
+      email: farmerProfile.email,
+      location: farmerProfile.location,
+    },
+  });
 
-  function updateValue(field, value) {
-    setValues((current) => ({ ...current, [field]: value }));
-    setErrors((current) => ({ ...current, [field]: "" }));
-    setSaved(false);
-  }
-
-  function validate() {
-    const nextErrors = {
-      name: !values.name.trim()
-        ? "Full name is required."
-        : values.name.trim().length < 3
-          ? "Full name must be at least 3 characters."
-          : "",
-      farm: values.farm.trim() ? "" : "Farm name is required.",
-      phone: validateIndianPhone(values.phone),
-      email: validateEmail(values.email),
-      location: values.location.trim() ? "" : "Farm location is required.",
-    };
-    setErrors(nextErrors);
-    return !Object.values(nextErrors).some(Boolean);
+  async function saveProfile() {
+    setSaved(true);
   }
   return (
     <div className="farmer-page reveal-up">
@@ -62,10 +53,8 @@ function FarmerProfile() {
       <form
         className="profile-form farmer-panel"
         noValidate
-        onSubmit={(event) => {
-          event.preventDefault();
-          if (validate()) setSaved(true);
-        }}
+        onSubmit={handleSubmit(saveProfile)}
+        onChange={() => setSaved(false)}
       >
         <div className="form-panel__heading">
           <span>01</span>
@@ -75,53 +64,100 @@ function FarmerProfile() {
           </div>
         </div>
         <div className="form-grid">
-          <label className={errors.name ? "field-invalid" : ""}>
+          <label
+            className={errors.name ? "field-invalid" : ""}
+            htmlFor={`${formId}-name`}
+          >
             Full name
             <input
-              value={values.name}
-              onChange={(event) => updateValue("name", event.target.value)}
+              id={`${formId}-name`}
+              aria-invalid={Boolean(errors.name)}
+              aria-describedby={
+                errors.name ? `${formId}-name-error` : undefined
+              }
+              {...register("name")}
             />
-            {errors.name && <span className="field-error">{errors.name}</span>}
-          </label>
-          <label className={errors.farm ? "field-invalid" : ""}>
-            Farm name
-            <input
-              value={values.farm}
-              onChange={(event) => updateValue("farm", event.target.value)}
-            />
-            {errors.farm && <span className="field-error">{errors.farm}</span>}
-          </label>
-          <label className={errors.phone ? "field-invalid" : ""}>
-            Phone number
-            <input
-              value={values.phone}
-              onChange={(event) => updateValue("phone", event.target.value)}
-            />
-            {errors.phone && (
-              <span className="field-error">{errors.phone}</span>
+            {errors.name && (
+              <span className="field-error" id={`${formId}-name-error`}>
+                {errors.name.message}
+              </span>
             )}
           </label>
-          <label className={errors.email ? "field-invalid" : ""}>
+          <label
+            className={errors.farm ? "field-invalid" : ""}
+            htmlFor={`${formId}-farm`}
+          >
+            Farm name
+            <input
+              id={`${formId}-farm`}
+              aria-invalid={Boolean(errors.farm)}
+              aria-describedby={
+                errors.farm ? `${formId}-farm-error` : undefined
+              }
+              {...register("farm")}
+            />
+            {errors.farm && (
+              <span className="field-error" id={`${formId}-farm-error`}>
+                {errors.farm.message}
+              </span>
+            )}
+          </label>
+          <label
+            className={errors.phone ? "field-invalid" : ""}
+            htmlFor={`${formId}-phone`}
+          >
+            Phone number
+            <input
+              id={`${formId}-phone`}
+              aria-invalid={Boolean(errors.phone)}
+              aria-describedby={
+                errors.phone ? `${formId}-phone-error` : undefined
+              }
+              {...register("phone")}
+            />
+            {errors.phone && (
+              <span className="field-error" id={`${formId}-phone-error`}>
+                {errors.phone.message}
+              </span>
+            )}
+          </label>
+          <label
+            className={errors.email ? "field-invalid" : ""}
+            htmlFor={`${formId}-email`}
+          >
             Email address
             <input
-              value={values.email}
-              onChange={(event) => updateValue("email", event.target.value)}
+              id={`${formId}-email`}
+              aria-invalid={Boolean(errors.email)}
+              aria-describedby={
+                errors.email ? `${formId}-email-error` : undefined
+              }
               type="email"
+              {...register("email")}
             />
             {errors.email && (
-              <span className="field-error">{errors.email}</span>
+              <span className="field-error" id={`${formId}-email-error`}>
+                {errors.email.message}
+              </span>
             )}
           </label>
           <label
             className={`form-label-block form-grid__wide${errors.location ? " field-invalid" : ""}`}
+            htmlFor={`${formId}-location`}
           >
             Farm location
             <input
-              value={values.location}
-              onChange={(event) => updateValue("location", event.target.value)}
+              id={`${formId}-location`}
+              aria-invalid={Boolean(errors.location)}
+              aria-describedby={
+                errors.location ? `${formId}-location-error` : undefined
+              }
+              {...register("location")}
             />
             {errors.location && (
-              <span className="field-error">{errors.location}</span>
+              <span className="field-error" id={`${formId}-location-error`}>
+                {errors.location.message}
+              </span>
             )}
           </label>
         </div>
@@ -132,8 +168,9 @@ function FarmerProfile() {
           <button
             type="submit"
             className="farmer-button farmer-button--primary"
+            disabled={isSubmitting}
           >
-            Save changes <span>↗</span>
+            {isSubmitting ? "Saving..." : "Save changes"} <span>↗</span>
           </button>
         </div>
         {saved && (

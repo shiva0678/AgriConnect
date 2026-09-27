@@ -1,39 +1,31 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import { Link } from "react-router-dom";
-import {
-  validatePositiveNumber,
-  validateRequired,
-} from "../../utils/formValidation";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { addCropSchema } from "../../schemas/cropSchemas";
 
 function AddCrop() {
-  const [values, setValues] = useState({
-    name: "",
-    category: "",
-    quantity: "",
-    price: "",
-    harvestDate: "",
-    region: "",
-  });
-  const [errors, setErrors] = useState({});
+  const formId = useId();
   const [saved, setSaved] = useState(false);
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm({
+    resolver: zodResolver(addCropSchema),
+    defaultValues: {
+      name: "",
+      category: "",
+      quantity: "",
+      price: "",
+      harvestDate: "",
+      region: "",
+      description: "",
+    },
+  });
 
-  function updateValue(field, value) {
-    setValues((current) => ({ ...current, [field]: value }));
-    setErrors((current) => ({ ...current, [field]: "" }));
-    setSaved(false);
-  }
-
-  function validate() {
-    const nextErrors = {
-      name: validateRequired(values.name, "Crop name"),
-      category: validateRequired(values.category, "Category"),
-      quantity: validatePositiveNumber(values.quantity, "Quantity"),
-      price: validatePositiveNumber(values.price, "Price"),
-      harvestDate: validateRequired(values.harvestDate, "Harvest date"),
-      region: validateRequired(values.region, "Region"),
-    };
-    setErrors(nextErrors);
-    return !Object.values(nextErrors).some(Boolean);
+  function handleCropSubmit() {
+    setSaved(true);
   }
   return (
     <div className="farmer-page reveal-up">
@@ -50,10 +42,8 @@ function AddCrop() {
       <form
         className="crop-form"
         noValidate
-        onSubmit={(event) => {
-          event.preventDefault();
-          if (validate()) setSaved(true);
-        }}
+        onSubmit={handleSubmit(handleCropSubmit)}
+        onChange={() => setSaved(false)}
       >
         <div className="crop-form__main">
           <section className="farmer-panel form-panel">
@@ -65,24 +55,38 @@ function AddCrop() {
               </div>
             </div>
             <div className="form-grid">
-              <label className={errors.name ? "field-invalid" : ""}>
+              <label
+                className={errors.name ? "field-invalid" : ""}
+                htmlFor={`${formId}-name`}
+              >
                 Crop name
                 <input
-                  value={values.name}
-                  onChange={(event) => updateValue("name", event.target.value)}
+                  id={`${formId}-name`}
+                  aria-invalid={Boolean(errors.name)}
+                  aria-describedby={
+                    errors.name ? `${formId}-name-error` : undefined
+                  }
                   placeholder="e.g. Tomatoes"
+                  {...register("name")}
                 />
                 {errors.name && (
-                  <span className="field-error">{errors.name}</span>
+                  <span className="field-error" id={`${formId}-name-error`}>
+                    {errors.name.message}
+                  </span>
                 )}
               </label>
-              <label className={errors.category ? "field-invalid" : ""}>
+              <label
+                className={errors.category ? "field-invalid" : ""}
+                htmlFor={`${formId}-category`}
+              >
                 Category
                 <select
-                  value={values.category}
-                  onChange={(event) =>
-                    updateValue("category", event.target.value)
+                  id={`${formId}-category`}
+                  aria-invalid={Boolean(errors.category)}
+                  aria-describedby={
+                    errors.category ? `${formId}-category-error` : undefined
                   }
+                  {...register("category")}
                 >
                   <option value="" disabled>
                     Select a category
@@ -93,63 +97,100 @@ function AddCrop() {
                   <option>Spices</option>
                 </select>
                 {errors.category && (
-                  <span className="field-error">{errors.category}</span>
+                  <span className="field-error" id={`${formId}-category-error`}>
+                    {errors.category.message}
+                  </span>
                 )}
               </label>
-              <label className={errors.quantity ? "field-invalid" : ""}>
+              <label
+                className={errors.quantity ? "field-invalid" : ""}
+                htmlFor={`${formId}-quantity`}
+              >
                 Quantity available
                 <input
-                  value={values.quantity}
-                  onChange={(event) =>
-                    updateValue("quantity", event.target.value)
+                  id={`${formId}-quantity`}
+                  aria-invalid={Boolean(errors.quantity)}
+                  aria-describedby={
+                    errors.quantity ? `${formId}-quantity-error` : undefined
                   }
                   type="number"
                   min="0"
                   step="any"
                   placeholder="e.g. 1,200 kg"
+                  {...register("quantity")}
                 />
                 {errors.quantity && (
-                  <span className="field-error">{errors.quantity}</span>
+                  <span className="field-error" id={`${formId}-quantity-error`}>
+                    {errors.quantity.message}
+                  </span>
                 )}
               </label>
-              <label className={errors.price ? "field-invalid" : ""}>
+              <label
+                className={errors.price ? "field-invalid" : ""}
+                htmlFor={`${formId}-price`}
+              >
                 Expected price
                 <input
-                  value={values.price}
-                  onChange={(event) => updateValue("price", event.target.value)}
+                  id={`${formId}-price`}
+                  aria-invalid={Boolean(errors.price)}
+                  aria-describedby={
+                    errors.price ? `${formId}-price-error` : undefined
+                  }
                   type="number"
                   min="0"
                   step="any"
                   placeholder="e.g. ₹32 / kg"
+                  {...register("price")}
                 />
                 {errors.price && (
-                  <span className="field-error">{errors.price}</span>
+                  <span className="field-error" id={`${formId}-price-error`}>
+                    {errors.price.message}
+                  </span>
                 )}
               </label>
-              <label className={errors.harvestDate ? "field-invalid" : ""}>
+              <label
+                className={errors.harvestDate ? "field-invalid" : ""}
+                htmlFor={`${formId}-harvest-date`}
+              >
                 Harvest date
                 <input
-                  value={values.harvestDate}
-                  onChange={(event) =>
-                    updateValue("harvestDate", event.target.value)
+                  id={`${formId}-harvest-date`}
+                  aria-invalid={Boolean(errors.harvestDate)}
+                  aria-describedby={
+                    errors.harvestDate
+                      ? `${formId}-harvest-date-error`
+                      : undefined
                   }
                   type="date"
+                  {...register("harvestDate")}
                 />
                 {errors.harvestDate && (
-                  <span className="field-error">{errors.harvestDate}</span>
+                  <span
+                    className="field-error"
+                    id={`${formId}-harvest-date-error`}
+                  >
+                    {errors.harvestDate.message}
+                  </span>
                 )}
               </label>
-              <label className={errors.region ? "field-invalid" : ""}>
+              <label
+                className={errors.region ? "field-invalid" : ""}
+                htmlFor={`${formId}-region`}
+              >
                 Growing region
                 <input
-                  value={values.region}
-                  onChange={(event) =>
-                    updateValue("region", event.target.value)
+                  id={`${formId}-region`}
+                  aria-invalid={Boolean(errors.region)}
+                  aria-describedby={
+                    errors.region ? `${formId}-region-error` : undefined
                   }
                   placeholder="e.g. Nashik, Maharashtra"
+                  {...register("region")}
                 />
                 {errors.region && (
-                  <span className="field-error">{errors.region}</span>
+                  <span className="field-error" id={`${formId}-region-error`}>
+                    {errors.region.message}
+                  </span>
                 )}
               </label>
             </div>
@@ -162,12 +203,29 @@ function AddCrop() {
                 <p>A little context helps the right buyer find you.</p>
               </div>
             </div>
-            <label className="form-label-block">
+            <label
+              className={`form-label-block${errors.description ? " field-invalid" : ""}`}
+              htmlFor={`${formId}-description`}
+            >
               Description
               <textarea
+                id={`${formId}-description`}
                 rows="5"
                 placeholder="What makes this harvest special? Share details about how it was grown, quality, or availability."
+                aria-invalid={Boolean(errors.description)}
+                aria-describedby={
+                  errors.description ? `${formId}-description-error` : undefined
+                }
+                {...register("description")}
               />
+              {errors.description && (
+                <span
+                  className="field-error"
+                  id={`${formId}-description-error`}
+                >
+                  {errors.description.message}
+                </span>
+              )}
             </label>
           </section>
         </div>
@@ -185,8 +243,10 @@ function AddCrop() {
             <button
               type="submit"
               className="farmer-button farmer-button--primary"
+              disabled={isSubmitting}
             >
-              Publish listing <span>↗</span>
+              {isSubmitting ? "Checking listing..." : "Publish listing"}{" "}
+              <span>↗</span>
             </button>
             <Link to="/farmer/crops" className="quiet-back">
               Save as draft

@@ -1,6 +1,32 @@
-import { buyerOrders } from "../../data/buyerMockData";
+import { m } from "framer-motion";
+import { useBuyerOrdersQuery } from "../../queries/orders";
 
 function BuyerOrders() {
+  const {
+    data: buyerOrders = [],
+    isLoading,
+    isError,
+    error,
+  } = useBuyerOrdersQuery();
+
+  if (isLoading) {
+    return (
+      <div className="farmer-page reveal-up buyer-page">
+        <div className="page-loading">Loading orders…</div>
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="farmer-page reveal-up buyer-page">
+        <div className="form-error" role="alert">
+          Unable to load orders. {error?.message || "Please try again."}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="farmer-page reveal-up buyer-page">
       <div className="farmer-page-heading">
@@ -33,9 +59,22 @@ function BuyerOrders() {
           ⌘ Filter <span>⌄</span>
         </button>
       </div>
-      <div className="orders-cards buyer-orders-cards">
+      <m.div
+        className="orders-cards buyer-orders-cards"
+        initial="hidden"
+        animate="visible"
+        variants={{ visible: { transition: { staggerChildren: 0.055 } } }}
+      >
         {buyerOrders.map((order) => (
-          <article className="order-card" key={order.id}>
+          <m.article
+            className="order-card"
+            key={order.id}
+            variants={{
+              hidden: { opacity: 0, y: 8 },
+              visible: { opacity: 1, y: 0 },
+            }}
+            transition={{ duration: 0.28, ease: "easeOut" }}
+          >
             <div className="order-card__top">
               <span
                 className={`buyer-crop-art buyer-crop-art--small buyer-crop-art--${order.tone}`}
@@ -92,9 +131,9 @@ function BuyerOrders() {
                 Delivered
               </span>
             </div>
-          </article>
+          </m.article>
         ))}
-      </div>
+      </m.div>
     </div>
   );
 }

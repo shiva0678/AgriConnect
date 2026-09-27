@@ -1,38 +1,34 @@
-import { useState } from "react";
+import { useId, useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { buyerProfile } from "../../data/buyerMockData";
-import { validateEmail, validateIndianPhone } from "../../utils/formValidation";
+import { buyerProfileSchema } from "../../schemas/profileSchemas";
 
 function BuyerProfile() {
-  const [values, setValues] = useState({
-    name: buyerProfile.name,
-    company: buyerProfile.company,
-    phone: buyerProfile.phone,
-    email: buyerProfile.email,
-    location: buyerProfile.location,
-  });
-  const [errors, setErrors] = useState({});
+  const nameId = useId();
+  const companyId = useId();
+  const phoneId = useId();
+  const emailId = useId();
+  const locationId = useId();
+
   const [saved, setSaved] = useState(false);
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm({
+    resolver: zodResolver(buyerProfileSchema),
+    defaultValues: {
+      name: buyerProfile.name,
+      company: buyerProfile.company,
+      phone: buyerProfile.phone,
+      email: buyerProfile.email,
+      location: buyerProfile.location,
+    },
+  });
 
-  function updateValue(field, value) {
-    setValues((current) => ({ ...current, [field]: value }));
-    setErrors((current) => ({ ...current, [field]: "" }));
-    setSaved(false);
-  }
-
-  function validate() {
-    const nextErrors = {
-      name: !values.name.trim()
-        ? "Full name is required."
-        : values.name.trim().length < 3
-          ? "Full name must be at least 3 characters."
-          : "",
-      company: values.company.trim() ? "" : "Company name is required.",
-      phone: validateIndianPhone(values.phone),
-      email: validateEmail(values.email),
-      location: values.location.trim() ? "" : "Operating region is required.",
-    };
-    setErrors(nextErrors);
-    return !Object.values(nextErrors).some(Boolean);
+  async function saveProfile() {
+    setSaved(true);
   }
   return (
     <div className="farmer-page reveal-up buyer-page">
@@ -64,10 +60,8 @@ function BuyerProfile() {
       <form
         className="profile-form farmer-panel"
         noValidate
-        onSubmit={(event) => {
-          event.preventDefault();
-          if (validate()) setSaved(true);
-        }}
+        onSubmit={handleSubmit(saveProfile)}
+        onChange={() => setSaved(false)}
       >
         <div className="form-panel__heading">
           <span>01</span>
@@ -77,55 +71,100 @@ function BuyerProfile() {
           </div>
         </div>
         <div className="form-grid">
-          <label className={errors.name ? "field-invalid" : ""}>
+          <label
+            className={errors.name ? "field-invalid" : ""}
+            htmlFor={`${nameId}-name`}
+          >
             Full name
             <input
-              value={values.name}
-              onChange={(event) => updateValue("name", event.target.value)}
+              id={`${nameId}-name`}
+              aria-invalid={Boolean(errors.name)}
+              aria-describedby={
+                errors.name ? `${nameId}-name-error` : undefined
+              }
+              {...register("name")}
             />
-            {errors.name && <span className="field-error">{errors.name}</span>}
+            {errors.name && (
+              <span className="field-error" id={`${nameId}-name-error`}>
+                {errors.name.message}
+              </span>
+            )}
           </label>
-          <label className={errors.company ? "field-invalid" : ""}>
+          <label
+            className={errors.company ? "field-invalid" : ""}
+            htmlFor={`${companyId}-company`}
+          >
             Company name
             <input
-              value={values.company}
-              onChange={(event) => updateValue("company", event.target.value)}
+              id={`${companyId}-company`}
+              aria-invalid={Boolean(errors.company)}
+              aria-describedby={
+                errors.company ? `${companyId}-company-error` : undefined
+              }
+              {...register("company")}
             />
             {errors.company && (
-              <span className="field-error">{errors.company}</span>
+              <span className="field-error" id={`${companyId}-company-error`}>
+                {errors.company.message}
+              </span>
             )}
           </label>
-          <label className={errors.phone ? "field-invalid" : ""}>
+          <label
+            className={errors.phone ? "field-invalid" : ""}
+            htmlFor={`${phoneId}-phone`}
+          >
             Phone number
             <input
-              value={values.phone}
-              onChange={(event) => updateValue("phone", event.target.value)}
+              id={`${phoneId}-phone`}
+              aria-invalid={Boolean(errors.phone)}
+              aria-describedby={
+                errors.phone ? `${phoneId}-phone-error` : undefined
+              }
+              {...register("phone")}
             />
             {errors.phone && (
-              <span className="field-error">{errors.phone}</span>
+              <span className="field-error" id={`${phoneId}-phone-error`}>
+                {errors.phone.message}
+              </span>
             )}
           </label>
-          <label className={errors.email ? "field-invalid" : ""}>
+          <label
+            className={errors.email ? "field-invalid" : ""}
+            htmlFor={`${emailId}-email`}
+          >
             Email address
             <input
-              value={values.email}
-              onChange={(event) => updateValue("email", event.target.value)}
+              id={`${emailId}-email`}
+              aria-invalid={Boolean(errors.email)}
+              aria-describedby={
+                errors.email ? `${emailId}-email-error` : undefined
+              }
               type="email"
+              {...register("email")}
             />
             {errors.email && (
-              <span className="field-error">{errors.email}</span>
+              <span className="field-error" id={`${emailId}-email-error`}>
+                {errors.email.message}
+              </span>
             )}
           </label>
           <label
             className={`form-label-block form-grid__wide${errors.location ? " field-invalid" : ""}`}
+            htmlFor={`${locationId}-location`}
           >
             Operating region
             <input
-              value={values.location}
-              onChange={(event) => updateValue("location", event.target.value)}
+              id={`${locationId}-location`}
+              aria-invalid={Boolean(errors.location)}
+              aria-describedby={
+                errors.location ? `${locationId}-location-error` : undefined
+              }
+              {...register("location")}
             />
             {errors.location && (
-              <span className="field-error">{errors.location}</span>
+              <span className="field-error" id={`${locationId}-location-error`}>
+                {errors.location.message}
+              </span>
             )}
           </label>
         </div>
@@ -136,8 +175,9 @@ function BuyerProfile() {
           <button
             type="submit"
             className="farmer-button farmer-button--primary"
+            disabled={isSubmitting}
           >
-            Save changes <span>↗</span>
+            {isSubmitting ? "Saving..." : "Save changes"} <span>↗</span>
           </button>
         </div>
         {saved && (

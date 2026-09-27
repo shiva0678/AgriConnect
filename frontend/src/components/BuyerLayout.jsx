@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { AnimatePresence, m } from "framer-motion";
 import {
   Link,
   NavLink,
@@ -9,6 +10,7 @@ import {
 import { BrandMark } from "./SiteChrome";
 import { useAuth } from "../context/AuthContext";
 import { buyerProfile } from "../data/buyerMockData";
+import { useMotionDrawer } from "../hooks/useMotionDrawer";
 
 const navigation = [
   { to: "/buyer/dashboard", label: "Overview", icon: "⌂" },
@@ -22,6 +24,10 @@ function BuyerLayout() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const { isMobile, panelRef, triggerRef } = useMotionDrawer(
+    mobileOpen,
+    setMobileOpen,
+  );
   const current = navigation.find((item) =>
     location.pathname.startsWith(item.to),
   );
@@ -36,7 +42,19 @@ function BuyerLayout() {
 
   return (
     <div className="farmer-shell buyer-shell">
-      <aside className={`farmer-sidebar${mobileOpen ? " is-open" : ""}`}>
+      <m.aside
+        id="buyer-navigation-drawer"
+        ref={panelRef}
+        className={`farmer-sidebar${mobileOpen ? " is-open" : ""}`}
+        initial={false}
+        animate={{ x: isMobile && !mobileOpen ? -270 : 0 }}
+        transition={{ duration: 0.22, ease: "easeOut" }}
+        aria-hidden={isMobile && !mobileOpen}
+        inert={isMobile && !mobileOpen}
+        role={isMobile ? "dialog" : undefined}
+        aria-modal={isMobile && mobileOpen ? true : undefined}
+        aria-label="Buyer navigation"
+      >
         <div className="farmer-sidebar__brand">
           <BrandMark />
         </div>
@@ -73,19 +91,29 @@ function BuyerLayout() {
         <Link className="farmer-sidebar__back" to="/">
           ← Back to marketplace
         </Link>
-      </aside>
-      {mobileOpen && (
-        <button
-          className="farmer-overlay"
-          aria-label="Close navigation"
-          onClick={() => setMobileOpen(false)}
-        />
-      )}
+      </m.aside>
+      <AnimatePresence>
+        {mobileOpen && (
+          <m.button
+            type="button"
+            className="farmer-overlay"
+            aria-label="Close navigation"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.16 }}
+            onClick={() => setMobileOpen(false)}
+          />
+        )}
+      </AnimatePresence>
       <div className="farmer-main">
         <header className="farmer-topbar">
           <button
             className="farmer-menu"
             aria-label="Open navigation"
+            aria-expanded={mobileOpen}
+            aria-controls="buyer-navigation-drawer"
+            ref={triggerRef}
             onClick={() => setMobileOpen(true)}
           >
             ☰

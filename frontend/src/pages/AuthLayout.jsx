@@ -1,8 +1,14 @@
 import { BrandMark } from "../components/SiteChrome";
+import { m } from "framer-motion";
 
 export function AuthLayout({ children, label, title, description }) {
   return (
-    <main className="auth-page">
+    <m.main
+      className="auth-page"
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.32, ease: "easeOut" }}
+    >
       <div className="auth-page__visual">
         <BrandMark inverse />
         <div className="auth-page__quote">
@@ -31,6 +37,6 @@ export function AuthLayout({ children, label, title, description }) {
         </div>
         {children}
       </div>
-    </main>
+    </m.main>
   );
 }

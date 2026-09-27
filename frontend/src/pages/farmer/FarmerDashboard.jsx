@@ -1,12 +1,34 @@
 import { Link } from "react-router-dom";
-import {
-  cropListings,
-  dashboardStats,
-  farmerOrders,
-  farmerProfile,
-} from "../../data/farmerMockData";
+import { m } from "framer-motion";
+import { useFarmerDashboardQuery } from "../../queries/crops";
+import { farmerProfile } from "../../data/farmerMockData";
 
 function FarmerDashboard() {
+  const {
+    data = { stats: [], recentCrops: [], recentOrders: [] },
+    isLoading,
+    isError,
+    error,
+  } = useFarmerDashboardQuery();
+
+  if (isLoading) {
+    return (
+      <div className="farmer-page reveal-up">
+        <div className="page-loading">Loading dashboard…</div>
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="farmer-page reveal-up">
+        <div className="form-error" role="alert">
+          Unable to load dashboard data. {error?.message || "Please try again."}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="farmer-page reveal-up">
       <div className="farmer-welcome">
@@ -27,19 +49,29 @@ function FarmerDashboard() {
           Add a crop <span>＋</span>
         </Link>
       </div>
-      <div className="farmer-stats">
-        {dashboardStats.map((stat) => (
-          <article
+      <m.div
+        className="farmer-stats"
+        initial="hidden"
+        animate="visible"
+        variants={{ visible: { transition: { staggerChildren: 0.055 } } }}
+      >
+        {data.stats.map((stat) => (
+          <m.article
             className={`farmer-stat farmer-stat--${stat.tone}`}
             key={stat.label}
+            variants={{
+              hidden: { opacity: 0, y: 10 },
+              visible: { opacity: 1, y: 0 },
+            }}
+            transition={{ duration: 0.3, ease: "easeOut" }}
           >
             <span className="farmer-stat__icon">{stat.icon}</span>
             <p>{stat.label}</p>
             <strong>{stat.value}</strong>
             <small>{stat.detail}</small>
-          </article>
+          </m.article>
         ))}
-      </div>
+      </m.div>
       <div className="farmer-dashboard-grid">
         <section className="farmer-panel farmer-panel--list">
           <div className="farmer-panel__heading">
@@ -52,7 +84,7 @@ function FarmerDashboard() {
             </Link>
           </div>
           <div className="dashboard-crop-list">
-            {cropListings.slice(0, 3).map((crop) => (
+            {data.recentCrops.map((crop) => (
               <div className="dashboard-crop-row" key={crop.id}>
                 <span
                   className={`crop-thumb crop-thumb--${crop.tone}`}
@@ -83,7 +115,7 @@ function FarmerDashboard() {
             </Link>
           </div>
           <div className="dashboard-order-list">
-            {farmerOrders.slice(0, 3).map((order) => (
+            {data.recentOrders.map((order) => (
               <div className="dashboard-order-row" key={order.id}>
                 <span className="buyer-avatar">{order.initials}</span>
                 <div>

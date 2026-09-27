@@ -1,7 +1,32 @@
 import { Link } from "react-router-dom";
-import { cropListings } from "../../data/farmerMockData";
+import { useFarmerCropListQuery } from "../../queries/crops";
 
 function FarmerCrops() {
+  const {
+    data: cropListings = [],
+    isLoading,
+    isError,
+    error,
+  } = useFarmerCropListQuery();
+
+  if (isLoading) {
+    return (
+      <div className="farmer-page reveal-up">
+        <div className="page-loading">Loading crop inventory…</div>
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="farmer-page reveal-up">
+        <div className="form-error" role="alert">
+          Unable to load crop inventory. {error?.message || "Please try again."}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="farmer-page reveal-up">
       <div className="farmer-page-heading">

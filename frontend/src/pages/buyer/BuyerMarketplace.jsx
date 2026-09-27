@@ -1,23 +1,62 @@
-import { useMemo, useState } from "react";
+import { useDeferredValue, useMemo, useState, useTransition } from "react";
 import { Link } from "react-router-dom";
-import { marketplaceCrops } from "../../data/buyerMockData";
+import { AnimatePresence, m } from "framer-motion";
+import { getCropImage } from "../../data/cropImagery";
+import { useDebounce } from "../../hooks/useDebounce";
+import { useMarketplaceCropsQuery } from "../../queries/crops";
 
 function BuyerMarketplace() {
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("All categories");
   const [region, setRegion] = useState("All regions");
   const [maxPrice, setMaxPrice] = useState(200);
+  const debouncedQuery = useDebounce(query, 200);
+  const deferredQuery = useDeferredValue(debouncedQuery);
+  const [isPending, startTransition] = useTransition();
+  const {
+    data: marketplaceCrops = [],
+    isLoading,
+    isError,
+    error,
+  } = useMarketplaceCropsQuery();
+
   const filteredCrops = useMemo(
     () =>
       marketplaceCrops.filter(
         (crop) =>
-          crop.name.toLowerCase().includes(query.toLowerCase()) &&
+          crop.name.toLowerCase().includes(deferredQuery.toLowerCase()) &&
           (category === "All categories" || crop.category === category) &&
           (region === "All regions" || crop.shortRegion === region) &&
           crop.priceValue <= maxPrice,
       ),
-    [query, category, region, maxPrice],
+    [marketplaceCrops, deferredQuery, category, region, maxPrice],
   );
+
+  const handleQueryChange = (event) => {
+    const nextValue = event.target.value;
+    startTransition(() => {
+      setQuery(nextValue);
+    });
+  };
+
+  if (isLoading) {
+    return (
+      <div className="farmer-page reveal-up buyer-page">
+        <div className="page-loading">Loading marketplace…</div>
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="farmer-page reveal-up buyer-page">
+        <div className="form-error" role="alert">
+          Unable to load marketplace data.{" "}
+          {error?.message || "Please try again."}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="farmer-page reveal-up buyer-page">
@@ -35,12 +74,14 @@ function BuyerMarketplace() {
         </div>
       </div>
       <section className="marketplace-toolbar">
-        <label className="market-search">
-          <span>⌕</span>
+        <label className="market-search" htmlFor="market-search-input">
+          <span aria-hidden="true">⌕</span>
           <input
+            id="market-search-input"
             value={query}
-            onChange={(event) => setQuery(event.target.value)}
+            onChange={handleQueryChange}
             placeholder="Search crops, farmers, or regions"
+            aria-label="Search crops, farmers, or regions"
           />
         </label>
         <label className="market-select">
@@ -83,65 +124,92 @@ function BuyerMarketplace() {
           />
         </label>
       </section>
-      <div className="marketplace-results">
-        <span>{filteredCrops.length} crops found</span>
-        <button>
+      <div className="marketplace-results" aria-live="polite">
+        <span>
+          {isPending
+            ? "Updating results…"
+            : `${filteredCrops.length} crops found`}
+        </span>
+        <button type="button">
           Sort by <strong>Harvest date</strong>⌄
         </button>
       </div>
       <div className="marketplace-grid">
-        {filteredCrops.map((crop) => (
-          <article className="market-card" key={crop.id}>
-            <Link
-              to={`/buyer/crop/${crop.id}`}
-              className={`market-card__image buyer-crop-art buyer-crop-art--${crop.tone}`}
+        <AnimatePresence initial={false}>
+          {filteredCrops.map((crop) => (
+            <m.article
+              className="market-card"
+              key={crop.id}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.98 }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
+              whileHover={{ y: -3 }}
             >
-              <span className="market-card__tag">{crop.category}</span>
-              <span
-                className="market-card__save"
-                aria-label={`Save ${crop.name}`}
+              <Link
+                to={`/buyer/crop/${crop.id}`}
+                className={`market-card__image buyer-crop-art buyer-crop-art--${crop.tone}`}
               >
-                ♡
-              </span>
-            </Link>
-            <div className="market-card__body">
-              <div className="market-card__title">
-                <div>
-                  <h3>{crop.name}</h3>
-                  <p>{crop.shortRegion}, Maharashtra</p>
+                <img
+                  src={getCropImage(crop.tone)}
+                  alt={crop.name}
+                  loading="lazy"
+                />
+                <span className="market-card__tag">{crop.category}</span>
+                <span
+                  className="market-card__save"
+                  aria-label={`Save ${crop.name}`}
+                >
+                  ♡
+                </span>
+              </Link>
+              <div className="market-card__body">
+                <div className="market-card__title">
+                  <div>
+                    <h3>{crop.name}</h3>
+                    <p>{crop.shortRegion}, Maharashtra</p>
+                  </div>
+                  <span className="market-card__price">
+                    {crop.price}
+                    <small>/ kg</small>
+                  </span>
                 </div>
-                <span className="market-card__price">
-                  {crop.price}
-                  <small>/ kg</small>
-                </span>
+                <div className="market-card__meta">
+                  <span>
+                    Available <strong>{crop.quantity}</strong>
+                  </span>
+                  <span>
+                    Harvest <strong>{crop.harvestDate}</strong>
+                  </span>
+                </div>
+                <div className="market-card__farmer">
+                  <span className="buyer-avatar">{crop.farmerInitials}</span>
+                  <span>
+                    <small>Grown by</small>
+                    <strong>{crop.farmer}</strong>
+                  </span>
+                  <Link to={`/buyer/crop/${crop.id}`}>View details ↗</Link>
+                </div>
               </div>
-              <div className="market-card__meta">
-                <span>
-                  Available <strong>{crop.quantity}</strong>
-                </span>
-                <span>
-                  Harvest <strong>{crop.harvestDate}</strong>
-                </span>
-              </div>
-              <div className="market-card__farmer">
-                <span className="buyer-avatar">{crop.farmerInitials}</span>
-                <span>
-                  <small>Grown by</small>
-                  <strong>{crop.farmer}</strong>
-                </span>
-                <Link to={`/buyer/crop/${crop.id}`}>View details ↗</Link>
-              </div>
-            </div>
-          </article>
-        ))}
+            </m.article>
+          ))}
+        </AnimatePresence>
       </div>
-      {filteredCrops.length === 0 && (
-        <div className="empty-market">
-          <span>⌕</span>
-          <h3>No crops match those filters.</h3>
-          <p>Try widening your search or price range.</p>
-        </div>
-      )}
+      <AnimatePresence initial={false}>
+        {filteredCrops.length === 0 && (
+          <m.div
+            className="empty-market"
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -4 }}
+            transition={{ duration: 0.18 }}
+          >
+            <span>⌕</span>
+            <h3>No crops match those filters.</h3>
+            <p>Try widening your search or price range.</p>
+          </m.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

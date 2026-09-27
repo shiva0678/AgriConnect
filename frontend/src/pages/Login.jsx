@@ -1,40 +1,30 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { AuthLayout } from "./AuthLayout";
 import { useAuth } from "../context/AuthContext";
 import { api } from "../services/api";
-import { validateEmail } from "../utils/formValidation";
+import { loginSchema } from "../schemas/authSchemas";
+import { getApiErrorMessage } from "../utils/apiErrorMessage";
 
 function Login() {
   const navigate = useNavigate();
   const { login } = useAuth();
-  const [values, setValues] = useState({ email: "", password: "" });
-  const [errors, setErrors] = useState({});
+  const emailId = useId();
+  const passwordId = useId();
   const [submitError, setSubmitError] = useState("");
   const [submitSuccess, setSubmitSuccess] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm({
+    resolver: zodResolver(loginSchema),
+    defaultValues: { email: "", password: "" },
+  });
 
-  function updateValue(field, value) {
-    setValues((current) => ({ ...current, [field]: value }));
-    setErrors((current) => ({ ...current, [field]: "" }));
-    setSubmitError("");
-    setSubmitSuccess("");
-  }
-
-  function validate() {
-    const nextErrors = {
-      email: validateEmail(values.email),
-      password: values.password ? "" : "Password is required.",
-    };
-    setErrors(nextErrors);
-    return !Object.values(nextErrors).some(Boolean);
-  }
-
-  async function handleSubmit(event) {
-    event.preventDefault();
-    if (!validate()) return;
-
-    setIsSubmitting(true);
+  async function handleLogin(values) {
     setSubmitError("");
     setSubmitSuccess("");
 
@@ -54,12 +44,12 @@ function Login() {
         navigate("/buyer/dashboard", { replace: true });
       }
     } catch (error) {
-      const message =
-        error.response?.data?.message ||
-        "Login failed. Please check your credentials.";
-      setSubmitError(message);
-    } finally {
-      setIsSubmitting(false);
+      setSubmitError(
+        getApiErrorMessage(
+          error,
+          "Login failed. Please check your credentials.",
+        ),
+      );
     }
   }
 
@@ -69,27 +59,57 @@ function Login() {
       title="Good to see you again."
       description="Sign in to continue your work across the growing network."
     >
-      <form className="auth-form" noValidate onSubmit={handleSubmit}>
-        <label className={errors.email ? "field-invalid" : ""}>
+      <form
+        className="auth-form"
+        noValidate
+        onSubmit={handleSubmit(handleLogin)}
+        onChange={() => {
+          setSubmitError("");
+          setSubmitSuccess("");
+        }}
+      >
+        <label
+          className={errors.email ? "field-invalid" : ""}
+          htmlFor={`${emailId}-email`}
+        >
           Email address
           <input
-            value={values.email}
-            onChange={(event) => updateValue("email", event.target.value)}
+            id={`${emailId}-email`}
+            aria-invalid={Boolean(errors.email)}
+            aria-describedby={
+              errors.email ? `${emailId}-email-error` : undefined
+            }
             type="email"
             placeholder="you@example.com"
+            autoComplete="email"
+            {...register("email")}
           />
-          {errors.email && <span className="field-error">{errors.email}</span>}
+          {errors.email && (
+            <span className="field-error" id={`${emailId}-email-error`}>
+              {errors.email.message}
+            </span>
+          )}
         </label>
-        <label className={errors.password ? "field-invalid" : ""}>
+        <label
+          className={errors.password ? "field-invalid" : ""}
+          htmlFor={`${passwordId}-password`}
+        >
           Password
           <input
-            value={values.password}
-            onChange={(event) => updateValue("password", event.target.value)}
+            id={`${passwordId}-password`}
+            aria-invalid={Boolean(errors.password)}
+            aria-describedby={
+              errors.password ? `${passwordId}-password-error` : undefined
+            }
             type="password"
             placeholder="Enter your password"
+            autoComplete="current-password"
+            {...register("password")}
           />
           {errors.password && (
-            <span className="field-error">{errors.password}</span>
+            <span className="field-error" id={`${passwordId}-password-error`}>
+              {errors.password.message}
+            </span>
           )}
         </label>
         <div className="form-row">
