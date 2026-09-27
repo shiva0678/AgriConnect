@@ -337,8 +337,8 @@ function Home() {
       >
         <div className="visual-section__image">
           <img
-            src="https://images.unsplash.com/photo-1464226184884-fa280b87c399?auto=format&fit=crop&w=1200&q=85"
-            alt="Fresh vegetables in a market basket"
+            src="/agriconnect-story.png"
+            alt="A farmer and buyer connect over fresh harvests from the field"
           />
           <div className="visual-section__label">
             Fresh from the field

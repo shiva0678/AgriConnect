@@ -326,7 +326,7 @@ h1 em, h2 em { color: var(--moss); font-weight: 600; }
 .process-list p { color: #a5b3a2; }
 .visual-section { display: grid; grid-template-columns: 1.1fr .9fr; gap: 9%; align-items: center; }
 .visual-section__image { position: relative; height: 475px; }
-.visual-section__image img { filter: saturate(.75) contrast(1.04); }
+.visual-section__image img { object-fit: contain; filter: drop-shadow(0 18px 22px rgba(18, 60, 49, .13)); }
 .visual-section__label { position: absolute; right: -31px; bottom: 28px; padding: 17px 21px; color: var(--paper); background: linear-gradient(135deg, var(--forest), #214738); font: 10px var(--mono); line-height: 1.5; text-transform: uppercase; }
 .visual-section__label strong { color: var(--saffron); }
 .visual-section__copy > p:not(.eyebrow) { max-width: 355px; margin: 30px 0 32px; color: var(--moss); font-size: 14px; line-height: 1.8; }
