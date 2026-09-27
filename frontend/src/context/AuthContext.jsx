@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import {
+  api,
   getStoredUser,
   setAuthToken,
   setStoredUser,
@@ -15,13 +16,41 @@ export function AuthProvider({ children }) {
   );
   const [loading, setLoading] = useState(true);
 
+  const syncUser = async (nextToken = token) => {
+    if (!nextToken) {
+      setUser(null);
+      setStoredUser(null);
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const response = await api.get("/auth/me");
+      const nextUser = response.data.user;
+      setUser(nextUser);
+      setStoredUser(nextUser);
+    } catch (error) {
+      clearAuthSession();
+      setUser(null);
+      setToken(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     const storedUser = getStoredUser();
     const storedToken = localStorage.getItem("agriconnect_token");
 
     setUser(storedUser || null);
     setToken(storedToken || null);
-    setLoading(false);
+    setLoading(true);
+
+    if (storedToken) {
+      syncUser(storedToken);
+    } else {
+      setLoading(false);
+    }
   }, []);
 
   const login = ({ userData, authToken }) => {
@@ -45,6 +74,11 @@ export function AuthProvider({ children }) {
       isAuthenticated: Boolean(token && user),
       login,
       logout,
+      updateUser: (nextUser) => {
+        setUser(nextUser);
+        setStoredUser(nextUser);
+      },
+      refreshUser: () => syncUser(token),
     }),
     [user, token, loading],
   );

@@ -1,7 +1,8 @@
-import { useId, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { buyerProfile } from "../../data/buyerMockData";
+import { useAuth } from "../../context/AuthContext";
+import { api } from "../../services/api";
 import { buyerProfileSchema } from "../../schemas/profileSchemas";
 
 function BuyerProfile() {
@@ -11,24 +12,48 @@ function BuyerProfile() {
   const emailId = useId();
   const locationId = useId();
 
+  const { user, updateUser } = useAuth();
   const [saved, setSaved] = useState(false);
+  const [saveError, setSaveError] = useState("");
   const {
     register,
     handleSubmit,
+    reset,
     formState: { errors, isSubmitting },
   } = useForm({
     resolver: zodResolver(buyerProfileSchema),
     defaultValues: {
-      name: buyerProfile.name,
-      company: buyerProfile.company,
-      phone: buyerProfile.phone,
-      email: buyerProfile.email,
-      location: buyerProfile.location,
+      name: user?.name || "",
+      company: "",
+      phone: user?.phone || "",
+      email: user?.email || "",
+      location: "",
     },
   });
 
-  async function saveProfile() {
-    setSaved(true);
+  useEffect(() => {
+    reset({
+      name: user?.name || "",
+      company: user?.company || "",
+      phone: user?.phone || "",
+      email: user?.email || "",
+      location: user?.location || "",
+    });
+  }, [user, reset]);
+
+  async function saveProfile(profile) {
+    setSaved(false);
+    setSaveError("");
+    try {
+      const response = await api.patch("/auth/me", profile);
+      updateUser(response.data.user);
+      setSaved(true);
+    } catch (error) {
+      setSaveError(
+        error.response?.data?.message ||
+          "Unable to save your profile. Please try again.",
+      );
+    }
   }
   return (
     <div className="farmer-page reveal-up buyer-page">
@@ -39,19 +64,24 @@ function BuyerProfile() {
           <p>Keep your buyer details clear for the farmers you work with.</p>
         </div>
         <span className="profile-member">
-          Member since {buyerProfile.memberSince}
+          Member since{" "}
+          {user?.created_at
+            ? new Date(user.created_at).toLocaleDateString("en-GB", {
+                day: "2-digit",
+                month: "short",
+                year: "numeric",
+              })
+            : "—"}
         </span>
       </div>
       <section className="profile-hero farmer-panel buyer-profile-hero">
         <div className="avatar avatar--profile avatar--buyer">
-          {buyerProfile.initials}
+          {(user?.name || "B").charAt(0).toUpperCase()}
         </div>
         <div>
           <p className="dashboard-eyebrow">Buyer profile</p>
-          <h3>{buyerProfile.name}</h3>
-          <p>
-            {buyerProfile.company} · {buyerProfile.location}
-          </p>
+          <h3>{user?.name || "Buyer"}</h3>
+          <p>{user?.email || "Buyer account"}</p>
         </div>
         <button className="farmer-button farmer-button--outline">
           Change photo
@@ -182,7 +212,12 @@ function BuyerProfile() {
         </div>
         {saved && (
           <p className="form-success" role="status">
-            Buyer profile changes saved for this session.
+            Your buyer profile has been saved.
+          </p>
+        )}
+        {saveError && (
+          <p className="form-error" role="alert">
+            {saveError}
           </p>
         )}
       </form>

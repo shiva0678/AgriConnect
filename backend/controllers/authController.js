@@ -1,8 +1,16 @@
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { AppError } from '../utils/AppError.js';
-import { validateRegistrationInput } from '../utils/validation.js';
-import { createUser, findUserByEmail } from '../models/userModel.js';
+import {
+  validateProfileUpdateInput,
+  validateRegistrationInput,
+} from '../utils/validation.js';
+import {
+  createUser,
+  findUserByEmail,
+  findUserById,
+  updateUserProfile,
+} from '../models/userModel.js';
 
 export async function registerUser(request, response, next) {
   try {
@@ -99,15 +107,86 @@ export async function loginUser(request, response, next) {
   }
 }
 
-export function getAuthenticatedUser(request, response) {
-  response.status(200).json({
-    success: true,
-    user: {
-      id: request.user.id,
-      name: request.user.name,
-      email: request.user.email,
-      role: request.user.role,
-    },
-  });
+export async function getAuthenticatedUser(request, response, next) {
+  try {
+    const user = await findUserById(request.user.id);
+
+    if (!user) {
+      throw new AppError(404, 'Authenticated user not found.');
+    }
+
+    response.status(200).json({
+      success: true,
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        role: user.role,
+        farm: user.farm_name,
+        company: user.company_name,
+        location: user.location,
+        created_at: user.created_at,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function updateAuthenticatedUser(request, response, next) {
+  try {
+    const validationError = validateProfileUpdateInput(
+      request.body,
+      request.user.role,
+    );
+    if (validationError) {
+      throw new AppError(400, validationError);
+    }
+
+    const email = String(request.body.email).trim().toLowerCase();
+    const existingUser = await findUserByEmail(email);
+    if (existingUser && existingUser.id !== request.user.id) {
+      throw new AppError(409, 'User with this email already exists.');
+    }
+
+    const user = await updateUserProfile(request.user.id, {
+      name: String(request.body.name).trim(),
+      email,
+      phone: String(request.body.phone).trim(),
+      farm: request.user.role === 'farmer'
+        ? String(request.body.farm).trim()
+        : null,
+      company: request.user.role === 'buyer'
+        ? String(request.body.company).trim()
+        : null,
+      location: String(request.body.location).trim(),
+    });
+
+    if (!user) {
+      throw new AppError(404, 'Authenticated user not found.');
+    }
+
+    response.status(200).json({
+      success: true,
+      message: 'Profile updated successfully.',
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        role: user.role,
+        farm: user.farm_name,
+        company: user.company_name,
+        location: user.location,
+        created_at: user.created_at,
+      },
+    });
+  } catch (error) {
+    if (error.code === '23505') {
+      return next(new AppError(409, 'User with this email already exists.'));
+    }
+    next(error);
+  }
 }
 

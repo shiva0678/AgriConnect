@@ -1,29 +1,57 @@
-import { useId, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { farmerProfile } from "../../data/farmerMockData";
+import { useAuth } from "../../context/AuthContext";
+import { api } from "../../services/api";
 import { farmerProfileSchema } from "../../schemas/profileSchemas";
 
 function FarmerProfile() {
   const formId = useId();
   const [saved, setSaved] = useState(false);
+  const [saveError, setSaveError] = useState("");
+  const { user, updateUser } = useAuth();
+  const fullName = user?.name || "Farmer";
+  const farmName = user?.farm || "Farm";
+  const formDefaults = {
+    name: user?.name || "",
+    farm: user?.farm || "",
+    phone: user?.phone || "",
+    email: user?.email || "",
+    location: user?.location || "",
+  };
   const {
     register,
     handleSubmit,
+    reset,
     formState: { errors, isSubmitting },
   } = useForm({
     resolver: zodResolver(farmerProfileSchema),
-    defaultValues: {
-      name: farmerProfile.name,
-      farm: farmerProfile.farm,
-      phone: farmerProfile.phone,
-      email: farmerProfile.email,
-      location: farmerProfile.location,
-    },
+    defaultValues: formDefaults,
   });
 
-  async function saveProfile() {
-    setSaved(true);
+  useEffect(() => {
+    reset({
+      name: user?.name || "",
+      farm: user?.farm || "",
+      phone: user?.phone || "",
+      email: user?.email || "",
+      location: user?.location || "",
+    });
+  }, [user, reset]);
+
+  async function saveProfile(profile) {
+    setSaved(false);
+    setSaveError("");
+    try {
+      const response = await api.patch("/auth/me", profile);
+      updateUser(response.data.user);
+      setSaved(true);
+    } catch (error) {
+      setSaveError(
+        error.response?.data?.message ||
+          "Unable to save your profile. Please try again.",
+      );
+    }
   }
   return (
     <div className="farmer-page reveal-up">
@@ -34,16 +62,25 @@ function FarmerProfile() {
           <p>This is how buyers and the AgriConnect team know your farm.</p>
         </div>
         <span className="profile-member">
-          Member since {farmerProfile.memberSince}
+          Member since{" "}
+          {user?.created_at
+            ? new Date(user.created_at).toLocaleDateString("en-GB", {
+                day: "2-digit",
+                month: "short",
+                year: "numeric",
+              })
+            : "—"}
         </span>
       </div>
       <section className="profile-hero farmer-panel">
-        <div className="avatar avatar--profile">{farmerProfile.initials}</div>
+        <div className="avatar avatar--profile">
+          {fullName.charAt(0).toUpperCase() || "F"}
+        </div>
         <div>
           <p className="dashboard-eyebrow">Farmer profile</p>
-          <h3>{farmerProfile.name}</h3>
+          <h3>{fullName}</h3>
           <p>
-            {farmerProfile.farm} · {farmerProfile.location}
+            {farmName} · {user?.location || "Location not available"}
           </p>
         </div>
         <button className="farmer-button farmer-button--outline">
@@ -175,7 +212,12 @@ function FarmerProfile() {
         </div>
         {saved && (
           <p className="form-success" role="status">
-            Profile changes saved for this session.
+            Your farmer profile has been saved.
+          </p>
+        )}
+        {saveError && (
+          <p className="form-error" role="alert">
+            {saveError}
           </p>
         )}
       </form>

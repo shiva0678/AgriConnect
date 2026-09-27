@@ -42,4 +42,10 @@ export async function initializeDatabase() {
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
   `);
+  await pool.query(`
+    ALTER TABLE users
+      ADD COLUMN IF NOT EXISTS farm_name VARCHAR(160),
+      ADD COLUMN IF NOT EXISTS company_name VARCHAR(160),
+      ADD COLUMN IF NOT EXISTS location VARCHAR(160)
+  `);
 }

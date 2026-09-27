@@ -9,7 +9,6 @@ import {
 } from "react-router-dom";
 import { BrandMark } from "./SiteChrome";
 import { useAuth } from "../context/AuthContext";
-import { buyerProfile } from "../data/buyerMockData";
 import { useMotionDrawer } from "../hooks/useMotionDrawer";
 
 const navigation = [
@@ -24,6 +23,8 @@ function BuyerLayout() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const workspaceName = user?.name || "Buyer account";
+  const workspaceEmail = user?.email || "Verified buyer";
   const { isMobile, panelRef, triggerRef } = useMotionDrawer(
     mobileOpen,
     setMobileOpen,
@@ -60,8 +61,8 @@ function BuyerLayout() {
         </div>
         <div className="farmer-sidebar__context">
           <span className="sidebar-kicker">Buyer workspace</span>
-          <strong>{buyerProfile.company}</strong>
-          <span>{buyerProfile.location}</span>
+          <strong>{workspaceName}</strong>
+          <span>{workspaceEmail}</span>
         </div>
         <nav className="farmer-nav" aria-label="Buyer navigation">
           <span className="sidebar-label">Workspace</span>
@@ -128,11 +129,11 @@ function BuyerLayout() {
             </button>
             <Link className="farmer-user" to="/buyer/profile">
               <span className="avatar avatar--small avatar--buyer">
-                {user?.name?.charAt(0)?.toUpperCase() || buyerProfile.initials}
+                {user?.name?.charAt(0)?.toUpperCase() || "B"}
               </span>
               <span>
-                <strong>{user?.name || buyerProfile.name}</strong>
-                <small>Buyer</small>
+                <strong>{user?.name || "Buyer"}</strong>
+                <small>{user?.role || "Buyer"}</small>
               </span>
               <b>⌄</b>
             </Link>

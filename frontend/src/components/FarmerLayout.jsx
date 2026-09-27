@@ -9,7 +9,6 @@ import {
 } from "react-router-dom";
 import { BrandMark } from "./SiteChrome";
 import { useAuth } from "../context/AuthContext";
-import { farmerProfile } from "../data/farmerMockData";
 import { useMotionDrawer } from "../hooks/useMotionDrawer";
 
 const navigation = [
@@ -24,6 +23,8 @@ function FarmerLayout() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const workspaceName = user?.name || "Farmer account";
+  const workspaceEmail = user?.email || "Verified farmer";
   const { isMobile, panelRef, triggerRef } = useMotionDrawer(
     mobileOpen,
     setMobileOpen,
@@ -60,8 +61,8 @@ function FarmerLayout() {
         </div>
         <div className="farmer-sidebar__context">
           <span className="sidebar-kicker">Farmer workspace</span>
-          <strong>{farmerProfile.farm}</strong>
-          <span>{farmerProfile.location}</span>
+          <strong>{workspaceName}</strong>
+          <span>{workspaceEmail}</span>
         </div>
         <nav className="farmer-nav" aria-label="Farmer navigation">
           <span className="sidebar-label">Workspace</span>
@@ -128,11 +129,11 @@ function FarmerLayout() {
             </button>
             <Link className="farmer-user" to="/farmer/profile">
               <span className="avatar avatar--small">
-                {user?.name?.charAt(0)?.toUpperCase() || farmerProfile.initials}
+                {user?.name?.charAt(0)?.toUpperCase() || "F"}
               </span>
               <span>
-                <strong>{user?.name || farmerProfile.name}</strong>
-                <small>Farmer</small>
+                <strong>{user?.name || "Farmer"}</strong>
+                <small>{user?.role || "Farmer"}</small>
               </span>
               <b>⌄</b>
             </Link>

@@ -1,13 +1,13 @@
 import { Link } from "react-router-dom";
 import { m } from "framer-motion";
+import { useAuth } from "../../context/AuthContext";
 import { getCropImage } from "../../data/cropImagery";
-import {
-  buyerOrders,
-  buyerProfile,
-  marketplaceCrops,
-} from "../../data/buyerMockData";
+import { buyerOrders, marketplaceCrops } from "../../data/buyerMockData";
 
 function BuyerDashboard() {
+  const { user } = useAuth();
+  const firstName = user?.name?.split(" ")[0] || "Buyer";
+
   return (
     <div className="farmer-page reveal-up buyer-page">
       <div className="farmer-welcome">
@@ -16,8 +16,7 @@ function BuyerDashboard() {
             Tuesday, 14 April 2026 <span /> Buyer workspace
           </p>
           <h2>
-            Good morning, {buyerProfile.name.split(" ")[0]}{" "}
-            <span aria-hidden="true">✳</span>
+            Good morning, {firstName} <span aria-hidden="true">✳</span>
           </h2>
           <p>Find the harvest that makes your next menu worth talking about.</p>
         </div>

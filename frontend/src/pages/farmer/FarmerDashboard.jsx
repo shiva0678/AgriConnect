@@ -1,15 +1,17 @@
 import { Link } from "react-router-dom";
 import { m } from "framer-motion";
+import { useAuth } from "../../context/AuthContext";
 import { useFarmerDashboardQuery } from "../../queries/crops";
-import { farmerProfile } from "../../data/farmerMockData";
 
 function FarmerDashboard() {
+  const { user } = useAuth();
   const {
     data = { stats: [], recentCrops: [], recentOrders: [] },
     isLoading,
     isError,
     error,
   } = useFarmerDashboardQuery();
+  const firstName = user?.name?.split(" ")[0] || "Farmer";
 
   if (isLoading) {
     return (
@@ -37,8 +39,7 @@ function FarmerDashboard() {
             Tuesday, 14 April 2026 <span /> Good morning
           </p>
           <h2>
-            Good morning, {farmerProfile.name.split(" ")[0]}{" "}
-            <span aria-hidden="true">✳</span>
+            Good morning, {firstName} <span aria-hidden="true">✳</span>
           </h2>
           <p>Here is how your farm is moving today.</p>
         </div>

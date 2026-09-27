@@ -46,3 +46,32 @@ export function validateRegistrationInput(payload) {
 
   return null;
 }
+
+export function validateProfileUpdateInput(payload, role) {
+  const { name, email, phone, farm, company, location } = payload ?? {};
+
+  if (!name || !String(name).trim() || String(name).trim().length > 120) {
+    return 'Name is required and must be 120 characters or fewer.';
+  }
+
+  const normalizedEmail = String(email ?? '').trim().toLowerCase();
+  if (!EMAIL_REGEX.test(normalizedEmail) || normalizedEmail.length > 255) {
+    return 'A valid email address of 255 characters or fewer is required.';
+  }
+
+  const normalizedPhone = String(phone ?? '').replace(/[\s-]/g, '');
+  if (/^(?:\+91|91)?[6-9]\d{9}$/.test(normalizedPhone) === false) {
+    return 'A valid 10-digit Indian phone number is required.';
+  }
+
+  const businessName = role === 'farmer' ? farm : company;
+  if (!businessName || !String(businessName).trim() || String(businessName).trim().length > 160) {
+    return `${role === 'farmer' ? 'Farm' : 'Company'} name is required and must be 160 characters or fewer.`;
+  }
+
+  if (!location || !String(location).trim() || String(location).trim().length > 160) {
+    return 'Location is required and must be 160 characters or fewer.';
+  }
+
+  return null;
+}

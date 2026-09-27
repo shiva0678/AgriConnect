@@ -3,6 +3,7 @@ import {
   getAuthenticatedUser,
   loginUser,
   registerUser,
+  updateAuthenticatedUser,
 } from '../controllers/authController.js';
 import { authenticateToken } from '../middleware/authMiddleware.js';
 
@@ -79,5 +80,6 @@ router.post('/register', registerUser);
 router.post('/login', loginUser);
 
 router.get('/me', authenticateToken, getAuthenticatedUser);
+router.patch('/me', authenticateToken, updateAuthenticatedUser);
 
 export default router;
