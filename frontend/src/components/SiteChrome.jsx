@@ -8,9 +8,12 @@ export function BrandMark({ inverse = false }) {
       className={`brand-mark${inverse ? " brand-mark--inverse" : ""}`}
       to="/"
     >
-      <span className="brand-mark__seed" aria-hidden="true">
-        ✳
-      </span>
+      <img
+        className="brand-mark__emblem"
+        src="/agriconnect-emblem.png"
+        alt=""
+        aria-hidden="true"
+      />
       <span>
         <strong>Agri</strong>Connect<small>Trade closer to the soil</small>
       </span>
