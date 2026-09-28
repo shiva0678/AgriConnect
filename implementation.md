@@ -8,15 +8,89 @@
 
 **Purpose of this document:** This file records the implementation work in a step-by-step format so that a teacher, reviewer, or future developer can understand what was built, how it was verified, and what has intentionally been postponed.
 
-## 2. Planned Technology Stack
+## 2. Technology Stack
 
-- Frontend: React with Vite
-- Styling: Tailwind CSS and custom responsive CSS
-- Backend: Node.js with Express
-- Database: Supabase PostgreSQL
-- Authentication planned for a later phase: Express API, bcrypt, and JWT
-- HTTP client planned for later API integration: Axios
-- Routing: React Router
+### Frontend
+
+- React 19 and Vite 8
+- React Router 7 for page and role-based route navigation
+- Axios for backend requests
+- TanStack Query for asynchronous data queries and mutations
+- React Hook Form and Zod for form handling and validation
+- Framer Motion for interface motion
+- Tailwind CSS 4 Vite plugin plus the project's custom CSS design system
+- Oxlint for linting
+
+### Backend
+
+- Node.js with Express 5
+- PostgreSQL through `pg`; the configured PostgreSQL host can be Supabase
+- `bcrypt` for password hashing
+- `jsonwebtoken` for signed bearer tokens
+- `dotenv`, `cors`, `swagger-jsdoc`, and `swagger-ui-express`
+- Node.js test runner and Supertest for API tests
+
+The active database integration uses a PostgreSQL `DATABASE_URL` and `pg.Pool`. Supabase is a supported PostgreSQL hosting option; Supabase Auth and the Supabase JavaScript client are not used by the active server.
+
+## Current Implementation Status
+
+**Verified:** 2026-09-28. This section is the current source of truth. Milestones later in this document describe what existed when those historical milestones were recorded; later work supersedes earlier statements that a feature was not implemented.
+
+### Implemented
+
+- Public landing, login, and registration pages; responsive farmer and buyer workspaces with custom glass-style treatments and motion effects.
+- Shared AgriConnect brand mark uses the supplied emblem in `frontend/public/agriconnect-emblem.png`; the landing-page harvest story uses the supplied farmer/buyer illustration in `frontend/public/agriconnect-story.png`.
+- Frontend form validation uses React Hook Form and Zod, with inline field feedback.
+- `POST /api/auth/register` validates user data, rejects duplicate emails, hashes passwords with bcrypt, and stores the user in PostgreSQL.
+- `POST /api/auth/login` verifies credentials and returns a one-day JWT.
+- `GET /api/auth/me` verifies the bearer token and returns the authenticated user's database record without password fields.
+- `PATCH /api/auth/me` validates and persists editable user profile fields. The buyer/farmer profile forms apply the returned user to shared auth state and local storage after saving.
+- Authenticated frontend state restores from the stored token, refreshes from `/api/auth/me`, and protects farmer/buyer routes by role.
+- PostgreSQL startup initialization creates the `users` table and adds optional `farm_name`, `company_name`, and `location` columns.
+- Health endpoints: `GET /api/health` and `GET /api/health/db`.
+- Swagger UI and JSON specification are mounted at `/api/docs` and `/api/docs.json`.
+- A global post-route 404 middleware returns JSON with `success: false`, `message: "API endpoint not found"`, and the requested `path`.
+- A shared JSON error handler formats application errors.
+
+### Current API surface
+
+| Method                | Endpoint             | Current behavior                           |
+| --------------------- | -------------------- | ------------------------------------------ |
+| `GET`                 | `/api/health`        | API health response                        |
+| `GET`                 | `/api/health/db`     | PostgreSQL connectivity check              |
+| `POST`                | `/api/auth/register` | Create a user account                      |
+| `POST`                | `/api/auth/login`    | Validate credentials and issue JWT         |
+| `GET`                 | `/api/auth/me`       | Read authenticated profile                 |
+| `PATCH`               | `/api/auth/me`       | Update authenticated profile in PostgreSQL |
+| `GET`                 | `/api/docs`          | Swagger UI                                 |
+| `GET`                 | `/api/docs.json`     | OpenAPI JSON document                      |
+| Other unmatched paths | —                    | JSON 404 response                          |
+
+The browser API base defaults to `http://localhost:5000/api` and can be overridden with `VITE_API_BASE_URL`.
+
+### Partial and demo-backed areas
+
+- Farmer/buyer dashboards, crop listings, marketplace results, and order histories still use synthetic data from the frontend data modules.
+- TanStack Query functions are prepared to request crop, farmer-dashboard, and order endpoints, but those endpoints and their database models do not exist in the backend yet. The query initial data remains mock data; these workflows are not backed by persistent server records.
+- Add-crop and place-order screens validate input and present UI feedback, but do not currently create persistent crops or orders.
+- Profile name, email, phone, and role come from the authenticated backend record. Farm/company name and location are editable and persisted by the profile API; photo change remains a placeholder.
+- Marketplace statistics and sample market insights are illustrative, not live analytics.
+
+### Latest verification
+
+Backend command:
+
+```powershell
+npm --prefix C:\Users\shiva\OneDrive\Desktop\AgriConnect\backend test -- --test-force-exit
+```
+
+Result on 2026-09-28: **15 tests passed, 0 failed**. Coverage includes registration, login, authenticated profile read/update, health, and the JSON 404 response. The test run also logged that the API started successfully.
+
+The frontend production build was verified after the landing illustration and logo assets were added. Vite completed successfully; no current crop/order backend behavior was verified because those APIs are not implemented.
+
+### Historical milestone note
+
+Milestones 1–7 below preserve the original implementation timeline. Statements such as “authentication is deferred” or “no database was added” refer to the state at that milestone and are superseded by the current status above.
 
 ## 3. Development Milestones Completed
 
@@ -676,34 +750,39 @@ No backend, database, authentication, JWT, or real form persistence was added.
 
 ```text
 AgriConnect/
-|-- .gitignore
-|-- README.md
 |-- implementation.md
+|-- README.md
 |-- backend/
-|   |-- .env.example
-|   |-- package.json
-|   |-- package-lock.json
-|   `-- src/
-|       |-- config/
-|       |   `-- supabase.js
-|       `-- server.js
+|   |-- config/db.js
+|   |-- controllers/
+|   |-- middleware/
+|   |-- models/userModel.js
+|   |-- routes/
+|   |-- tests/
+|   |-- utils/
+|   |-- server.js
+|   |-- swagger.js
+|   `-- package.json
 `-- frontend/
-    |-- package.json
-    |-- package-lock.json
-    |-- vite.config.js
     |-- public/
-    `-- src/
-        |-- App.jsx
-        |-- App.css
-        |-- index.css
-        |-- main.jsx
-        |-- components/
-        |   `-- SiteChrome.jsx
-        `-- pages/
-            |-- AuthLayout.jsx
-            |-- Home.jsx
-            |-- Login.jsx
-            `-- Register.jsx
+    |   |-- agriconnect-emblem.png
+    |   |-- agriconnect-story.png
+    |   |-- favicon.svg
+    |   `-- icons.svg
+    |-- src/
+    |   |-- components/
+    |   |-- context/AuthContext.jsx
+    |   |-- data/
+    |   |-- pages/
+    |   |   |-- buyer/
+    |   |   `-- farmer/
+    |   |-- queries/
+    |   |-- schemas/
+    |   |-- services/api.js
+    |   `-- utils/
+    |-- index.html
+    |-- package.json
+    `-- vite.config.js
 ```
 
 ## 5. How To Run The Project
@@ -745,44 +824,30 @@ Health check URL:
 http://localhost:5000/api/health
 ```
 
-## 6. What Has Not Been Implemented Yet
+## 6. Remaining Work
 
-The following items are intentionally deferred to later milestones:
+These are not implemented in the current codebase:
 
-- Real user registration
-- Real user login
-- Password hashing with bcrypt
-- JWT creation and validation
-- Protected routes
-- Supabase database tables
-- Supabase data persistence
-- Farmer product listings
-- Buyer marketplace workflows
-- Price analytics
-- AI recommendation functionality
-- Government scheme matching
-- RAG, FAISS, and LLM functionality
-- Frontend-backend form integration
-- Production deployment and Docker configuration
-- Multiple Indian language support
+- Crop listing schema, database model, and farmer crop CRUD endpoints.
+- Persistent buyer marketplace queries and crop detail endpoints.
+- Order schema, database model, order creation, status changes, and buyer/farmer order endpoints.
+- Connect the crop, dashboard, and order screens to working backend APIs instead of mock initial data.
+- Live analytics, market pricing, recommendations, and farmer/buyer activity derived from persisted records.
+- Automated tests for crop and order workflows after those APIs are implemented.
+- Password reset, email verification, account deletion, and refresh-token/session renewal flows.
+- Production deployment, Docker configuration, and deployment-specific environment/security review.
+- AI assistant, RAG/FAISS/LLM, government scheme matching, and multilingual support.
 
-This separation keeps the current milestone focused on public frontend UI and navigation.
+The mock crop/order/analytics UI is useful for frontend demonstration, but it must not be described as persistent marketplace functionality.
 
 ## 7. Recommended Next Workflow
 
-1. Review the public pages in the browser.
-2. Commit the current frontend milestone.
-3. Push the milestone commit to the remote repository.
-4. Begin the next planned backend or database milestone only after this frontend milestone is accepted.
-
-Suggested Git commands:
-
-```powershell
-git status
-git add implementation.md README.md frontend
-git commit -m "feat: add public AgriConnect frontend pages"
-git push origin main
-```
+1. Design the crop and order PostgreSQL schemas and their ownership/authorization rules.
+2. Implement and test farmer crop CRUD, marketplace listing/detail, and buyer order workflows.
+3. Connect the existing TanStack Query screens to those APIs and remove mock initial data as each workflow becomes real.
+4. Add integration tests for role access, validation, and persistence.
+5. Implement analytics/recommendations after reliable crop and order data exists.
+6. Add AI/scheme/multilingual features, then Docker and production deployment.
 
 ---
 
@@ -1005,4 +1070,75 @@ Direct schema verification returned these column names:
 id,name,email,phone,password,role,created_at
 ```
 
-No registration, login, JWT, crop table, order table, or Supabase Auth implementation was added.
+No registration, login, JWT, crop table, order table, or Supabase Auth implementation was added at the time this milestone was completed. Later milestones below supersede the authentication statements.
+
+---
+
+### Milestone 8: User Registration, Login, and Protected Sessions
+
+#### Objective
+
+Connect the existing account screens to the Express API and persist user accounts in PostgreSQL.
+
+#### Work completed
+
+1. Added `POST /api/auth/register` with server-side validation and duplicate-email handling.
+2. Hash registration passwords with bcrypt before inserting them into the users table.
+3. Added `POST /api/auth/login` with bcrypt password verification and one-day JWT issuance.
+4. Added bearer-token middleware that verifies JWTs and attaches authenticated identity to the request.
+5. Added role-protected farmer and buyer frontend routes.
+6. Connected login and registration forms to the API, including loading states and server error feedback.
+7. Added browser session storage for the JWT and user payload, session restoration, and logout cleanup.
+8. Added the shared JSON error response format and Swagger API documentation.
+
+#### API behavior
+
+- Registration returns `201` and a safe user payload; password hashes are not returned.
+- Login returns `200`, a JWT, and a safe user payload.
+- Invalid credentials return `401`; invalid registration fields return `400`; duplicate email returns `409`.
+- Protected routes require `Authorization: Bearer <token>`.
+
+---
+
+### Milestone 9: Authenticated Current-User Profile API
+
+#### Objective
+
+Read and update the currently authenticated account using the user ID verified from the JWT.
+
+#### Work completed
+
+1. Added `GET /api/auth/me` to fetch the current user from PostgreSQL.
+2. Limited the response to safe profile fields: ID, name, email, phone, role, farm/company name, location, and creation date. Password fields are excluded.
+3. Added optional `farm_name`, `company_name`, and `location` user columns during idempotent database initialization.
+4. Added `PATCH /api/auth/me` with role-aware validation, duplicate-email protection, and a database update for the authenticated account.
+5. Connected farmer and buyer profile forms to the PATCH endpoint.
+6. Updated React auth state and local storage from the successful server response so the header, dashboard greeting, and profile view refresh immediately.
+7. Reset profile form fields when the authenticated profile is loaded or updated.
+
+Profile edits are committed when the user submits **Save changes**; they are not written on each keystroke. Changing a profile photo is still a placeholder.
+
+---
+
+### Milestone 10: Global API 404 and Brand Context
+
+#### Work completed
+
+1. Kept the global not-found middleware after the documentation, auth, and health routes.
+2. Standardized unmatched-route responses to JSON:
+
+```json
+{
+  "success": false,
+  "message": "API endpoint not found",
+  "path": "/api/this-route-does-not-exist"
+}
+```
+
+3. Added regression coverage for the unknown-route response and for `GET /api/health` continuing to return `200`.
+4. Replaced the shared logo's placeholder symbol with the supplied emblem at `frontend/public/agriconnect-emblem.png`; the same file is used as the favicon.
+5. Added the supplied farmer/buyer harvest illustration at `frontend/public/agriconnect-story.png` in the existing landing-page harvest-story section.
+
+#### Verification
+
+On 2026-09-28, `npm --prefix backend test -- --test-force-exit` completed with **15 passing tests and 0 failures**. The suite covers health, registration, login, authentication, current-user read/update, and unknown API routes. The frontend production build completed successfully after the landing-page image change.
