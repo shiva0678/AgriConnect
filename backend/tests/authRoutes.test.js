@@ -16,6 +16,24 @@ function makePayload(overrides = {}) {
   };
 }
 
+test('unknown API routes return a JSON 404 response', async () => {
+  const path = '/api/this-route-does-not-exist';
+  const response = await request(app).get(path);
+
+  assert.equal(response.status, 404);
+  assert.equal(response.body.success, false);
+  assert.equal(response.body.message, 'API endpoint not found');
+  assert.equal(response.body.path, path);
+});
+
+test('GET /api/health remains available', async () => {
+  const response = await request(app).get('/api/health');
+
+  assert.equal(response.status, 200);
+  assert.equal(response.body.success, true);
+  assert.equal(response.body.message, 'AgriConnect API is running');
+});
+
 test('POST /api/auth/register creates a user with valid data', async () => {
   const payload = makePayload();
   const response = await request(app)
