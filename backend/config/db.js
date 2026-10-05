@@ -48,4 +48,30 @@ export async function initializeDatabase() {
       ADD COLUMN IF NOT EXISTS company_name VARCHAR(160),
       ADD COLUMN IF NOT EXISTS location VARCHAR(160)
   `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS crops (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      farmer_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      name VARCHAR(120) NOT NULL,
+      category VARCHAR(40) NOT NULL,
+      description TEXT,
+      price NUMERIC(12, 2) NOT NULL CHECK (price >= 0),
+      unit VARCHAR(20) NOT NULL DEFAULT 'kg',
+      quantity NUMERIC(14, 2) NOT NULL CHECK (quantity >= 0),
+      location VARCHAR(160) NOT NULL,
+      harvest_date DATE NOT NULL,
+      expiry_date DATE,
+      status VARCHAR(20) NOT NULL DEFAULT 'available' CHECK (status IN ('available', 'sold_out', 'inactive')),
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS crops_farmer_id_idx ON crops (farmer_id);
+    CREATE INDEX IF NOT EXISTS crops_status_idx ON crops (status);
+    CREATE INDEX IF NOT EXISTS crops_category_idx ON crops (category);
+    CREATE INDEX IF NOT EXISTS crops_location_idx ON crops (location);
+  `);
 }
