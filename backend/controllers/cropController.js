@@ -8,8 +8,62 @@ import {
   deleteCrop,
   findCropById,
   findCropsByFarmerId,
+  findMarketplaceCrops,
   updateCrop,
 } from '../models/cropModel.js';
+
+const MARKETPLACE_SORTS = new Set(['newest', 'oldest', 'price_asc', 'price_desc']);
+const DEFAULT_PAGE = 1;
+const DEFAULT_LIMIT = 12;
+const MAX_LIMIT = 50;
+
+function parsePositiveInteger(value, fallback) {
+  if (typeof value !== 'string' || !/^\d+$/.test(value)) {
+    return fallback;
+  }
+
+  const parsed = Number(value);
+  return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+export async function getMarketplaceCropsController(request, response, next) {
+  const rawSort = typeof request.query.sort === 'string'
+    ? request.query.sort.trim().toLowerCase()
+    : 'newest';
+
+  if (!MARKETPLACE_SORTS.has(rawSort)) {
+    return next(new AppError(400, 'Sort must be one of: newest, oldest, price_asc, price_desc.'));
+  }
+
+  const page = parsePositiveInteger(request.query.page, DEFAULT_PAGE);
+  const requestedLimit = parsePositiveInteger(request.query.limit, DEFAULT_LIMIT);
+  const limit = Math.min(requestedLimit, MAX_LIMIT);
+  const filters = {
+    page,
+    limit,
+    search: typeof request.query.search === 'string' ? request.query.search.trim() : '',
+    category: typeof request.query.category === 'string' ? request.query.category.trim() : '',
+    location: typeof request.query.location === 'string' ? request.query.location.trim() : '',
+    sort: rawSort,
+  };
+
+  try {
+    const { crops, total } = await findMarketplaceCrops(filters);
+
+    response.status(200).json({
+      success: true,
+      crops,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: total === 0 ? 0 : Math.ceil(total / limit),
+      },
+    });
+  } catch {
+    next(new AppError(500, 'Unable to retrieve marketplace crops.'));
+  }
+}
 
 function sanitizeCropPayload(payload = {}) {
   return {

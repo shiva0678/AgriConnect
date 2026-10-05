@@ -5,10 +5,61 @@ import {
   deleteCropHandler,
   getCropByIdHandler,
   getFarmerCropsHandler,
+  getMarketplaceCropsController,
   updateCropHandler,
 } from '../controllers/cropController.js';
 
 const router = Router();
+
+/**
+ * @openapi
+ * /api/crops:
+ *   get:
+ *     summary: Search and browse available marketplace crops
+ *     parameters:
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Case-insensitive substring search in crop name
+ *       - in: query
+ *         name: category
+ *         schema:
+ *           type: string
+ *         description: Case-insensitive crop category filter
+ *       - in: query
+ *         name: location
+ *         schema:
+ *           type: string
+ *         description: Case-insensitive substring filter in crop location
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 50
+ *           default: 12
+ *       - in: query
+ *         name: sort
+ *         schema:
+ *           type: string
+ *           enum: [newest, oldest, price_asc, price_desc]
+ *           default: newest
+ *     responses:
+ *       200:
+ *         description: Available crops and pagination metadata
+ *       400:
+ *         description: Invalid sort value
+ *       500:
+ *         description: Marketplace crops could not be retrieved
+ */
+router.get('/crops', getMarketplaceCropsController);
 
 /**
  * @openapi

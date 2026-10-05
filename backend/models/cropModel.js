@@ -1,5 +1,66 @@
 import { pool } from '../config/db.js';
 
+const marketplaceSortOrders = {
+  newest: 'c.created_at DESC',
+  oldest: 'c.created_at ASC',
+  price_asc: 'c.price ASC',
+  price_desc: 'c.price DESC',
+};
+
+function buildMarketplaceFilters(filters) {
+  const conditions = ["c.status = 'available'"];
+  const values = [];
+
+  if (filters.search) {
+    values.push(`%${filters.search}%`);
+    conditions.push(`c.name ILIKE $${values.length}`);
+  }
+
+  if (filters.category) {
+    values.push(filters.category);
+    conditions.push(`c.category ILIKE $${values.length}`);
+  }
+
+  if (filters.location) {
+    values.push(`%${filters.location}%`);
+    conditions.push(`c.location ILIKE $${values.length}`);
+  }
+
+  return {
+    whereClause: conditions.join(' AND '),
+    values,
+  };
+}
+
+export async function findMarketplaceCrops({ page, limit, search, category, location, sort }) {
+  const { whereClause, values } = buildMarketplaceFilters({ search, category, location });
+  const offset = (page - 1) * limit;
+  const orderBy = marketplaceSortOrders[sort] || marketplaceSortOrders.newest;
+  const listingValues = [...values, limit, offset];
+
+  const [listingResult, countResult] = await Promise.all([
+    pool.query(
+      `SELECT c.*
+       FROM crops c
+       WHERE ${whereClause}
+       ORDER BY ${orderBy}, c.id DESC
+       LIMIT $${values.length + 1} OFFSET $${values.length + 2}`,
+      listingValues
+    ),
+    pool.query(
+      `SELECT COUNT(*)::int AS total
+       FROM crops c
+       WHERE ${whereClause}`,
+      values
+    ),
+  ]);
+
+  return {
+    crops: listingResult.rows,
+    total: countResult.rows[0]?.total ?? 0,
+  };
+}
+
 export async function createCrop(crop) {
   const result = await pool.query(
     `INSERT INTO crops (
