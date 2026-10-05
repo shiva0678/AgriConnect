@@ -6,7 +6,16 @@ const options = {
     info: {
       title: 'AgriConnect API',
       version: '1.0.0',
-      description: 'AgriConnect backend API documentation for health and authentication endpoints.',
+      description: 'AgriConnect backend API documentation for health, authentication, and farmer crop management endpoints.',
+    },
+    components: {
+      securitySchemes: {
+        bearerAuth: {
+          type: 'http',
+          scheme: 'bearer',
+          bearerFormat: 'JWT',
+        },
+      },
     },
     servers: [
       {

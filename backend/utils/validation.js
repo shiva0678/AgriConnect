@@ -2,6 +2,74 @@ const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PHONE_REGEX = /^[6-9]\d{9}$/;
 const VALID_ROLES = new Set(['farmer', 'buyer']);
 
+export function validateCropInput(payload = {}) {
+  const name = String(payload.name ?? '').trim();
+  const category = String(payload.category ?? '').trim();
+  const unit = String(payload.unit ?? '').trim();
+  const location = String(payload.location ?? '').trim();
+  const price = Number(payload.price);
+  const quantity = Number(payload.quantity);
+
+  if (!name || name.length > 120) {
+    return 'Crop name is required and must be 120 characters or fewer.';
+  }
+
+  if (!category || category.length > 40) {
+    return 'Crop category is required and must be 40 characters or fewer.';
+  }
+
+  if (payload.price === undefined || payload.price === null || Number.isNaN(price)) {
+    return 'Crop price is required.';
+  }
+
+  if (price < 0) {
+    return 'Crop price must be non-negative.';
+  }
+
+  if (!unit || unit.length > 20) {
+    return 'Crop unit is required and must be 20 characters or fewer.';
+  }
+
+  if (payload.quantity === undefined || payload.quantity === null || Number.isNaN(quantity)) {
+    return 'Crop quantity is required.';
+  }
+
+  if (quantity < 0) {
+    return 'Crop quantity must be non-negative.';
+  }
+
+  if (!location || location.length > 160) {
+    return 'Crop location is required and must be 160 characters or fewer.';
+  }
+
+  if (!payload.harvest_date) {
+    return 'Harvest date is required.';
+  }
+
+  if (payload.expiry_date) {
+    const harvestDate = new Date(payload.harvest_date);
+    const expiryDate = new Date(payload.expiry_date);
+
+    if (Number.isNaN(harvestDate.getTime()) || Number.isNaN(expiryDate.getTime())) {
+      return 'Harvest and expiry dates must be valid ISO date strings.';
+    }
+
+    if (expiryDate < harvestDate) {
+      return 'Expiry date cannot be earlier than harvest date.';
+    }
+  }
+
+  return null;
+}
+
+export function validateCropUpdateInput(payload = {}) {
+  if (!payload || Object.keys(payload).length === 0) {
+    return 'At least one crop field is required for update.';
+  }
+
+  return validateCropInput(payload);
+}
+
 export function validateRegistrationInput(payload) {
   const { name, email, phone, password, role } = payload ?? {};
 
