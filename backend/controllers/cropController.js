@@ -6,6 +6,7 @@ import {
 import {
   createCrop,
   deleteCrop,
+  findAvailableCropById,
   findCropById,
   findCropsByFarmerId,
   findMarketplaceCrops,
@@ -16,6 +17,7 @@ const MARKETPLACE_SORTS = new Set(['newest', 'oldest', 'price_asc', 'price_desc'
 const DEFAULT_PAGE = 1;
 const DEFAULT_LIMIT = 12;
 const MAX_LIMIT = 50;
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function parsePositiveInteger(value, fallback) {
   if (typeof value !== 'string' || !/^\d+$/.test(value)) {
@@ -132,8 +134,12 @@ export async function getFarmerCropsController(request, response, next) {
 }
 
 export async function getCropByIdController(request, response, next) {
+  if (!UUID_PATTERN.test(request.params.id)) {
+    return next(new AppError(400, 'Invalid crop ID.'));
+  }
+
   try {
-    const crop = await findCropById(request.params.id);
+    const crop = await findAvailableCropById(request.params.id);
 
     if (!crop) {
       throw new AppError(404, 'Crop not found.');
@@ -144,7 +150,11 @@ export async function getCropByIdController(request, response, next) {
       crop,
     });
   } catch (error) {
-    next(error);
+    if (error instanceof AppError) {
+      return next(error);
+    }
+
+    next(new AppError(500, 'Unable to retrieve crop details.'));
   }
 }
 

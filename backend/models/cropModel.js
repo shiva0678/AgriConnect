@@ -95,6 +95,19 @@ export async function createCrop(crop) {
   return result.rows[0] || null;
 }
 
+export async function findAvailableCropById(id) {
+  const result = await pool.query(
+    `SELECT c.*, u.name AS farmer_name, u.farm_name
+     FROM crops c
+     LEFT JOIN users u ON u.id = c.farmer_id
+     WHERE c.id = $1 AND c.status = 'available'
+     LIMIT 1`,
+    [id]
+  );
+
+  return result.rows[0] || null;
+}
+
 export async function findCropById(id) {
   const result = await pool.query(
     `SELECT c.*, u.name AS farmer_name, u.email AS farmer_email

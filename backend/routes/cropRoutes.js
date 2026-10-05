@@ -140,9 +140,7 @@ router.get('/farmer/crops', authenticateToken, getFarmerCropsHandler);
  * @openapi
  * /api/crops/{id}:
  *   get:
- *     summary: Get a crop by id
- *     security:
- *       - bearerAuth: []
+ *     summary: Get an available marketplace crop by id
  *     parameters:
  *       - in: path
  *         name: id
@@ -152,15 +150,68 @@ router.get('/farmer/crops', authenticateToken, getFarmerCropsHandler);
  *           format: uuid
  *     responses:
  *       200:
- *         description: Crop returned successfully
- *       401:
- *         description: Authentication required
+ *         description: Available crop and safe farmer display information returned successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 crop:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                       format: uuid
+ *                     name:
+ *                       type: string
+ *                     category:
+ *                       type: string
+ *                     description:
+ *                       type: string
+ *                       nullable: true
+ *                     price:
+ *                       type: number
+ *                     unit:
+ *                       type: string
+ *                     quantity:
+ *                       type: number
+ *                     location:
+ *                       type: string
+ *                     harvest_date:
+ *                       type: string
+ *                       format: date
+ *                     expiry_date:
+ *                       type: string
+ *                       format: date
+ *                       nullable: true
+ *                     status:
+ *                       type: string
+ *                       enum: [available]
+ *                     farmer_id:
+ *                       type: string
+ *                       format: uuid
+ *                     farmer_name:
+ *                       type: string
+ *                       nullable: true
+ *                     farm_name:
+ *                       type: string
+ *                       nullable: true
+ *                     created_at:
+ *                       type: string
+ *                       format: date-time
+ *                     updated_at:
+ *                       type: string
+ *                       format: date-time
+ *       400:
+ *         description: Crop ID is not a valid UUID
  *       404:
- *         description: Crop not found
+ *         description: Crop not found or not marketplace-available
  *       500:
- *         description: Database error
+ *         description: Crop details could not be retrieved
  */
-router.get('/crops/:id', authenticateToken, getCropByIdHandler);
+router.get('/crops/:id', getCropByIdHandler);
 
 /**
  * @openapi
