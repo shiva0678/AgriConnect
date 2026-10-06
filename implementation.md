@@ -1,1144 +1,153 @@
 # AgriConnect Implementation Record
 
-## 1. Project Overview
+## 1. Project overview
 
-**Project name:** AgriConnect
+AgriConnect is a full-stack marketplace prototype for farmer-to-buyer crop transactions. The project combines a React frontend with an Express API and a PostgreSQL-backed user/crop foundation.
 
-**Project description:** An AI-powered farmer-to-buyer marketplace with price analytics.
+This document records the current implementation status as of 2026-10-06 and is intended to reflect the actual codebase rather than older milestone notes.
 
-**Purpose of this document:** This file records the implementation work in a step-by-step format so that a teacher, reviewer, or future developer can understand what was built, how it was verified, and what has intentionally been postponed.
-
-## 2. Technology Stack
+## 2. Current technology stack
 
 ### Frontend
 
-- React 19 and Vite 8
-- React Router 7 for page and role-based route navigation
-- Axios for backend requests
-- TanStack Query for asynchronous data queries and mutations
-- React Hook Form and Zod for form handling and validation
-- Framer Motion for interface motion
-- Tailwind CSS 4 Vite plugin plus the project's custom CSS design system
-- Oxlint for linting
+- React 19
+- Vite 8
+- React Router
+- Axios for API requests
+- TanStack Query hooks for async data access
+- React Hook Form + Zod for validation
+- Custom CSS-driven design system with glassmorphism-inspired styling
 
 ### Backend
 
-- Node.js with Express 5
-- PostgreSQL through `pg`; the configured PostgreSQL host can be Supabase
-- `bcrypt` for password hashing
-- `jsonwebtoken` for signed bearer tokens
-- `dotenv`, `cors`, `swagger-jsdoc`, and `swagger-ui-express`
-- Node.js test runner and Supertest for API tests
+- Node.js + Express 5
+- PostgreSQL via `pg`
+- JWT-based authentication with `jsonwebtoken`
+- Password hashing with `bcrypt`
+- Swagger UI + swagger-jsdoc
+- Node test runner + Supertest for API verification
 
-The active database integration uses a PostgreSQL `DATABASE_URL` and `pg.Pool`. Supabase is a supported PostgreSQL hosting option; Supabase Auth and the Supabase JavaScript client are not used by the active server.
+## 3. Verified backend implementation
 
-## Current Implementation Status
+The backend is currently functional for account and crop infrastructure.
 
-**Verified:** 2026-09-28. This section is the current source of truth. Milestones later in this document describe what existed when those historical milestones were recorded; later work supersedes earlier statements that a feature was not implemented.
+### Auth and profile
 
-### Implemented
+Implemented and verified features include:
 
-- Public landing, login, and registration pages; responsive farmer and buyer workspaces with custom glass-style treatments and motion effects.
-- Shared AgriConnect brand mark uses the supplied emblem in `frontend/public/agriconnect-emblem.png`; the landing-page harvest story uses the supplied farmer/buyer illustration in `frontend/public/agriconnect-story.png`.
-- Frontend form validation uses React Hook Form and Zod, with inline field feedback.
-- `POST /api/auth/register` validates user data, rejects duplicate emails, hashes passwords with bcrypt, and stores the user in PostgreSQL.
-- `POST /api/auth/login` verifies credentials and returns a one-day JWT.
-- `GET /api/auth/me` verifies the bearer token and returns the authenticated user's database record without password fields.
-- `PATCH /api/auth/me` validates and persists editable user profile fields. The buyer/farmer profile forms apply the returned user to shared auth state and local storage after saving.
-- Authenticated frontend state restores from the stored token, refreshes from `/api/auth/me`, and protects farmer/buyer routes by role.
-- PostgreSQL startup initialization creates the `users` table and adds optional `farm_name`, `company_name`, and `location` columns.
-- Health endpoints: `GET /api/health` and `GET /api/health/db`.
-- Swagger UI and JSON specification are mounted at `/api/docs` and `/api/docs.json`.
-- A global post-route 404 middleware returns JSON with `success: false`, `message: "API endpoint not found"`, and the requested `path`.
-- A shared JSON error handler formats application errors.
+- `POST /api/auth/register`
+- `POST /api/auth/login`
+- `GET /api/auth/me`
+- `PATCH /api/auth/me`
+- JWT validation through the auth middleware
+- Protected role checks for buyer/farmer flows
+- Safe user payload responses that exclude password hashes
 
-### Current API surface
+### Health and API structure
 
-| Method                | Endpoint             | Current behavior                           |
-| --------------------- | -------------------- | ------------------------------------------ |
-| `GET`                 | `/api/health`        | API health response                        |
-| `GET`                 | `/api/health/db`     | PostgreSQL connectivity check              |
-| `POST`                | `/api/auth/register` | Create a user account                      |
-| `POST`                | `/api/auth/login`    | Validate credentials and issue JWT         |
-| `GET`                 | `/api/auth/me`       | Read authenticated profile                 |
-| `PATCH`               | `/api/auth/me`       | Update authenticated profile in PostgreSQL |
-| `GET`                 | `/api/docs`          | Swagger UI                                 |
-| `GET`                 | `/api/docs.json`     | OpenAPI JSON document                      |
-| Other unmatched paths | —                    | JSON 404 response                          |
+- `GET /api/health`
+- `GET /api/health/db`
+- Swagger docs at `/api/docs` and `/api/docs.json`
+- Global JSON not-found handler for unmatched routes
+- Shared error middleware for consistent API responses
 
-The browser API base defaults to `http://localhost:5000/api` and can be overridden with `VITE_API_BASE_URL`.
+### Crop foundation
 
-### Partial and demo-backed areas
+Database and route support are in place for crop workflows:
 
-- Farmer/buyer dashboards, crop listings, marketplace results, and order histories still use synthetic data from the frontend data modules.
-- TanStack Query functions are prepared to request crop, farmer-dashboard, and order endpoints, but those endpoints and their database models do not exist in the backend yet. The query initial data remains mock data; these workflows are not backed by persistent server records.
-- Add-crop and place-order screens validate input and present UI feedback, but do not currently create persistent crops or orders.
-- Profile name, email, phone, and role come from the authenticated backend record. Farm/company name and location are editable and persisted by the profile API; photo change remains a placeholder.
-- Marketplace statistics and sample market insights are illustrative, not live analytics.
+- PostgreSQL `users` table and `crops` table creation logic
+- Crop indexes for farmer ownership and marketplace access
+- `GET /api/crops` for public marketplace browsing
+- `POST /api/crops` for authenticated farmer crop creation
+- `GET /api/farmer/crops` for farmer inventory access
+- `GET /api/crops/:id` for public crop details
+- `PATCH /api/crops/:id` for farmer-owned crop updates
+- `DELETE /api/crops/:id` for farmer-owned crop deletion
 
-### Latest verification
+These routes enforce ownership and role-based access on the server side.
 
-Backend command:
+## 4. Current API surface
+
+| Method              | Endpoint             | Status           |
+| ------------------- | -------------------- | ---------------- |
+| GET                 | `/api/health`        | Implemented      |
+| GET                 | `/api/health/db`     | Implemented      |
+| POST                | `/api/auth/register` | Implemented      |
+| POST                | `/api/auth/login`    | Implemented      |
+| GET                 | `/api/auth/me`       | Implemented      |
+| PATCH               | `/api/auth/me`       | Implemented      |
+| GET                 | `/api/crops`         | Implemented      |
+| POST                | `/api/crops`         | Implemented      |
+| GET                 | `/api/farmer/crops`  | Implemented      |
+| GET                 | `/api/crops/:id`     | Implemented      |
+| PATCH               | `/api/crops/:id`     | Implemented      |
+| DELETE              | `/api/crops/:id`     | Implemented      |
+| GET                 | `/api/docs`          | Implemented      |
+| GET                 | `/api/docs.json`     | Implemented      |
+| Any unmatched route | —                    | JSON 404 handler |
+
+## 5. Frontend status and key limitation
+
+The frontend shell and many role-based pages are present and render correctly, but the crop, marketplace, and add-crop flows are still not fully connected to the live backend.
+
+### What is still mock-backed
+
+The following flows remain demo data driven in the frontend:
+
+- Farmer crop inventory list
+- Add-crop form submission
+- Buyer marketplace list and filters
+- Buyer crop detail screens
+- Order history and order actions
+- Static dashboard metrics and seeded product data
+
+Relevant frontend files still show the mock pattern:
+
+- `frontend/src/pages/farmer/AddCrop.jsx`
+- `frontend/src/pages/farmer/FarmerCrops.jsx`
+- `frontend/src/queries/crops.js`
+- `frontend/src/data/farmerMockData.js`
+- `frontend/src/data/buyerMockData.js`
+- `frontend/src/services/api.js`
+
+### Important reality check
+
+The app is visually built as a full product, but not every screen is wired to the database-backed API yet. In the current implementation, a crop created in the farmer form will not appear in the UI unless the frontend form is connected to the real `POST /api/crops` flow and the inventory query is set to fetch the real farmer list instead of mock data.
+
+This is the main source of the current mismatch: the backend is live and validated, but the frontend still uses mock data in several user flows.
+
+## 6. Verification
+
+The backend test command was run in the current workspace and logged the auth/profile checks as they executed. The command output in this session showed the API starting and the protected auth flow checks running, but the final summary line was not captured before the terminal timed out.
+
+Command used:
 
 ```powershell
 npm --prefix C:\Users\shiva\OneDrive\Desktop\AgriConnect\backend test -- --test-force-exit
 ```
 
-Result on 2026-09-28: **15 tests passed, 0 failed**. Coverage includes registration, login, authenticated profile read/update, health, and the JSON 404 response. The test run also logged that the API started successfully.
+Observed output included:
 
-The frontend production build was verified after the landing illustration and logo assets were added. Vite completed successfully; no current crop/order backend behavior was verified because those APIs are not implemented.
+- API startup on port 5000
+- Login validation checks
+- Missing-token and invalid-token rejection checks
+- Authenticated profile read and update checks
 
-### Historical milestone note
+This section therefore reflects the verified runtime state of the codebase rather than a final pass/fail count.
 
-Milestones 1–7 below preserve the original implementation timeline. Statements such as “authentication is deferred” or “no database was added” refer to the state at that milestone and are superseded by the current status above.
+## 7. Current project priority
 
-## 3. Development Milestones Completed
+The immediate next priority is frontend-to-backend integration for crop actions, not further backend feature expansion. The backend foundation already supports the implemented phases; the remaining gap is connecting the live UI to the live database-backed endpoints.
 
-### Milestone 1: Project Foundation
+## 8. Recommended next steps
 
-#### Objective
+1. Connect the farmer Add Crop form to `POST /api/crops`.
+2. Replace mock farmer inventory data with `GET /api/farmer/crops`.
+3. Replace marketplace mock data with `GET /api/crops`.
+4. Correct the frontend API base URL to the active backend port instead of stale localhost assumptions.
+5. Integrate buyer crop detail data from `GET /api/crops/:id`.
+6. Add or update UI tests after the live data flow is connected.
 
-Create the initial full-stack project structure without implementing authentication, database tables, marketplace workflows, or analytics.
+## 9. Final note
 
-#### Work completed
-
-1. Created the `frontend/` directory using the Vite React template.
-2. Installed the initial frontend dependencies.
-3. Installed Axios and React Router for future frontend integration.
-4. Added Tailwind CSS through the Vite Tailwind plugin.
-5. Created the `backend/` directory as an independent Node.js package.
-6. Installed Express, CORS, dotenv, Supabase client support, and Nodemon.
-7. Added a root-level README file.
-8. Added root-level Git ignore rules.
-9. Added a backend environment template.
-10. Added a simple frontend placeholder branded as AgriConnect.
-11. Added a backend health endpoint.
-12. Configured both frontend and backend to run independently.
-
-#### Important files created
-
-- `README.md`
-- `.gitignore`
-- `frontend/package.json`
-- `frontend/package-lock.json`
-- `frontend/vite.config.js`
-- `frontend/src/main.jsx`
-- `frontend/src/App.jsx`
-- `frontend/src/index.css`
-- `backend/package.json`
-- `backend/package-lock.json`
-- `backend/.env.example`
-- `backend/src/server.js`
-- `backend/src/config/supabase.js`
-
-#### Backend API created
-
-`GET /api/health`
-
-Example response:
-
-```json
-{
-  "success": true,
-  "message": "AgriConnect API is running",
-  "databaseConfigured": false
-}
-```
-
-The `databaseConfigured` value is false when Supabase environment variables have not been supplied. This is expected at this stage because no database tables or database features were implemented.
-
-#### Verification output
-
-Frontend build command:
-
-```powershell
-cd frontend
-npm run build
-```
-
-Result:
-
-```text
-vite building client environment for production...
-29 modules transformed.
-Built successfully.
-```
-
-Backend health verification:
-
-```powershell
-Invoke-RestMethod -Uri "http://localhost:5000/api/health"
-```
-
-Result:
-
-```json
-{
-  "success": true,
-  "message": "AgriConnect API is running",
-  "databaseConfigured": false
-}
-```
-
-#### Git checkpoint
-
-The initial foundation was committed and pushed:
-
-```text
-dedd602 chore: initialize AgriConnect project
-```
-
-The commit was pushed to the `main` branch on the configured remote repository.
-
----
-
-### Milestone 2: Public Frontend Pages and Navigation
-
-#### Objective
-
-Create the public-facing frontend experience only. This milestone includes the Home, Login, and Register pages with responsive navigation and temporary frontend-only form feedback.
-
-#### Work completed
-
-1. Replaced the original Vite placeholder screen with a public AgriConnect website shell.
-2. Added React Router routes:
-   - `/`
-   - `/login`
-   - `/register`
-3. Created a reusable brand mark.
-4. Created a reusable public header.
-5. Created a reusable public footer.
-6. Created a reusable authentication page layout.
-7. Designed a responsive Home page.
-8. Added Login form fields and browser validation.
-9. Added Register form fields and browser validation.
-10. Added Farmer and Buyer role selection.
-11. Added temporary success messages after form submission.
-12. Added custom responsive visual styling.
-13. Added a hero image, crop visual section, feature section, and process section.
-14. Updated the root README to describe the new frontend milestone.
-
-#### Home page contents
-
-The Home page includes:
-
-- AgriConnect branding
-- Professional hero section
-- Headline explaining direct farmer-to-buyer connection
-- Call-to-action buttons
-- Features section
-- How-it-works section
-- Agriculture marketplace visual section
-- Footer
-- Links to Login and Register
-
-#### Login page contents
-
-The Login page includes:
-
-- Email field
-- Password field
-- Keep-me-signed-in checkbox
-- Forgot-password placeholder link
-- Login button
-- Link to Register
-- Temporary frontend success message after submission
-
-The form uses native browser validation and does not call the backend.
-
-#### Register page contents
-
-The Register page includes:
-
-- Full Name field
-- Email field
-- Phone field
-- Password field
-- Confirm Password field
-- Farmer / Buyer role selection
-- Register button
-- Link to Login
-- Temporary frontend success message after submission
-
-The form uses required fields, email validation, phone input type, and minimum password length validation. It does not call the backend.
-
-#### Reusable frontend files added
-
-- `frontend/src/components/SiteChrome.jsx`
-  - `BrandMark`
-  - `PublicHeader`
-  - `PublicFooter`
-- `frontend/src/pages/AuthLayout.jsx`
-- `frontend/src/pages/Home.jsx`
-- `frontend/src/pages/Login.jsx`
-- `frontend/src/pages/Register.jsx`
-
-#### Routing implementation
-
-Routing is configured in `frontend/src/App.jsx` using `BrowserRouter`, `Routes`, and `Route`.
-
-All public pages use the shared public layout for consistent navigation and footer behavior.
-
-#### Visual design direction
-
-The frontend intentionally avoids a generic dashboard or basic AI-generated template appearance. The visual direction uses:
-
-- Deep forest green for the agricultural identity
-- Saffron accent color for actions and highlights
-- Paper-like warm backgrounds
-- Editorial serif headings paired with a clean sans-serif body font
-- Small mono labels for field-note and marketplace details
-- Asymmetric section layouts
-- Direct-trade and field-oriented language
-- Crop imagery and a visual marketplace section
-- Subtle page-load reveal animation
-- Responsive layouts for desktop, tablet, and mobile widths
-
-#### Verification output
-
-Frontend production build:
-
-```powershell
-cd frontend
-npm run build
-```
-
-Result:
-
-```text
-vite building client environment for production...
-29 modules transformed.
-Built successfully.
-```
-
-Frontend lint:
-
-```powershell
-cd frontend
-npm run lint
-```
-
-Result:
-
-```text
-oxlint
-No lint errors reported.
-```
-
-Editor diagnostics:
-
-```text
-No errors found in App.jsx.
-No errors found in SiteChrome.jsx.
-No errors found in Home.jsx.
-No errors found in AuthLayout.jsx.
-No errors found in Login.jsx.
-No errors found in Register.jsx.
-No errors found in index.css.
-```
-
-Browser route verification:
-
-```text
-/          -> Home page loaded
-/login     -> Login page loaded
-/register  -> Register page loaded
-```
-
-Browser navigation verification:
-
-```text
-Login -> Create an account -> /register
-Register -> Log in -> /login
-```
-
-Temporary form behavior verification:
-
-```text
-Login submission -> "Thanks, your sign-in is ready for the next step."
-Register submission -> "Your account details are ready. Welcome to the network."
-```
-
-No backend request was made by either form, as required for this milestone.
-
----
-
-### Milestone 3: Farmer Frontend Workspace With Static Data
-
-#### Objective
-
-Complete the farmer-side frontend UI using mock data only. This milestone does not connect a database, create APIs, implement authentication, or provide real CRUD behavior.
-
-#### Routes created
-
-- `/farmer/dashboard`
-- `/farmer/crops`
-- `/farmer/add-crop`
-- `/farmer/orders`
-- `/farmer/profile`
-
-#### Work completed
-
-1. Added a reusable farmer dashboard layout.
-2. Added a desktop sidebar with farmer workspace navigation.
-3. Added a top navigation bar with current-page context, notifications placeholder, and user profile area.
-4. Added a responsive mobile navigation drawer with overlay and close behavior.
-5. Added static farmer profile, crop, order, and dashboard metric data.
-6. Added the Farmer Dashboard page.
-7. Added the My Crops page with a responsive crop table.
-8. Added the Add Crop page with a professional frontend-only form.
-9. Added the Orders page with Pending, Confirmed, Shipped, and Delivered statuses.
-10. Added the Profile page with editable-looking fields and temporary save feedback.
-11. Added responsive styling for desktop, tablet, and mobile layouts.
-
-#### Farmer dashboard contents
-
-- Welcome message for Arjun Mehta
-- Total crops metric
-- Active listings metric
-- Open orders metric
-- Revenue metric
-- Recent crop listings
-- Recent orders
-- Nashik market insight card
-- Link to add a crop
-
-#### My Crops contents
-
-The page displays mock crop rows with:
-
-- Crop name
-- Category
-- Quantity
-- Price
-- Harvest date
-- Region
-- Status
-
-It also includes static All crops, Active, and Sold tabs, a filter placeholder, and pagination controls for the UI experience.
-
-#### Add Crop contents
-
-The frontend-only form includes:
-
-- Crop name
-- Category
-- Quantity available
-- Expected price
-- Harvest date
-- Growing region
-- Description
-- Publish listing button
-- Save as draft link
-
-Submitting valid mock data displays:
-
-```text
-Your crop listing is ready to review.
-```
-
-The form does not persist data and does not call the backend.
-
-#### Orders contents
-
-The mock orders page displays buyer, crop, quantity, amount, order date, and status information. The supported statuses are:
-
-- Pending
-- Confirmed
-- Shipped
-- Delivered
-
-Each order also includes a visual progress indicator.
-
-#### Profile contents
-
-The profile page displays:
-
-- Farmer initials and profile header
-- Full name
-- Farm name
-- Phone number
-- Email address
-- Farm location
-- Member-since information
-- Change photo placeholder
-- Save changes action
-
-Submitting the profile form displays:
-
-```text
-Profile changes saved for this session.
-```
-
-This is temporary frontend feedback only.
-
-#### Reusable farmer files added
-
-- `frontend/src/components/FarmerLayout.jsx`
-- `frontend/src/data/farmerMockData.js`
-- `frontend/src/pages/farmer/FarmerDashboard.jsx`
-- `frontend/src/pages/farmer/FarmerCrops.jsx`
-- `frontend/src/pages/farmer/AddCrop.jsx`
-- `frontend/src/pages/farmer/FarmerOrders.jsx`
-- `frontend/src/pages/farmer/FarmerProfile.jsx`
-
-#### Verification output
-
-Frontend production build:
-
-```powershell
-cd frontend
-npm run build
-```
-
-Result:
-
-```text
-36 modules transformed.
-Built successfully.
-```
-
-Frontend lint:
-
-```powershell
-cd frontend
-npm run lint
-```
-
-Result:
-
-```text
-No lint errors reported.
-```
-
-Browser route verification:
-
-```text
-/farmer/dashboard -> Good morning, Arjun
-/farmer/crops     -> My crops
-/farmer/add-crop  -> List a new crop
-/farmer/orders    -> Orders
-/farmer/profile   -> Your profile
-```
-
-Browser interaction verification:
-
-```text
-Add Crop valid submission -> Your crop listing is ready to review.
-Profile submission -> Profile changes saved for this session.
-Mobile navigation -> Sidebar drawer opened successfully.
-```
-
-No database, API, authentication, or real crop/order persistence was added.
-
----
-
-### Milestone 4: Buyer Frontend Workspace With Static Data
-
-#### Objective
-
-Complete the buyer-side frontend UI with a searchable mock marketplace, crop details, orders, and profile screens. This milestone remains frontend-only and does not connect APIs, databases, authentication, or JWT.
-
-#### Routes created
-
-- `/buyer/dashboard`
-- `/buyer/marketplace`
-- `/buyer/crop/:id`
-- `/buyer/orders`
-- `/buyer/profile`
-
-#### Work completed
-
-1. Added a reusable buyer dashboard layout with sidebar, top navigation, profile area, and mobile navigation drawer.
-2. Added static buyer profile, crop marketplace, and order mock data.
-3. Added the Buyer Dashboard page with welcome message, available crops, active orders, recent orders, and marketplace CTA.
-4. Added a professional marketplace with crop cards, search, category filter, region filter, price range control, crop imagery placeholders, farmer information, and detail links.
-5. Added the Crop Details page with farmer information, region, quantity, price, harvest date, description, quantity input, and temporary Place Order feedback.
-6. Added the Buyer Orders page with mock order cards and status badges.
-7. Added the Buyer Profile page with editable-looking buyer and company information plus temporary save feedback.
-8. Added buyer-specific responsive styles while reusing the existing AgriConnect workspace design system.
-
-#### Marketplace behavior
-
-The marketplace uses `buyerMockData.js` and filters the static crop list in the browser. Search, category, region, and price range controls update the visible crop cards without any network request.
-
-Example mock crops include:
-
-- Tomatoes
-- Red Onions
-- Alphonso Mangoes
-- Green Chilli
-- Pearl Millet
-- Turmeric
-
-#### Crop details behavior
-
-Each crop card links to `/buyer/crop/:id`. The detail page shows the selected mock crop and calculates an estimated order total from the entered quantity and static price. Submitting the form displays:
-
-```text
-Your order request has been noted for this session.
-```
-
-No order is persisted or sent to the backend.
-
-#### Reusable buyer files added
-
-- `frontend/src/components/BuyerLayout.jsx`
-- `frontend/src/data/buyerMockData.js`
-- `frontend/src/pages/buyer/BuyerDashboard.jsx`
-- `frontend/src/pages/buyer/BuyerMarketplace.jsx`
-- `frontend/src/pages/buyer/BuyerCropDetails.jsx`
-- `frontend/src/pages/buyer/BuyerOrders.jsx`
-- `frontend/src/pages/buyer/BuyerProfile.jsx`
-
-#### Verification output
-
-Frontend production build:
-
-```powershell
-cd frontend
-npm run build
-```
-
-Result:
-
-```text
-43 modules transformed.
-Built successfully.
-```
-
-Frontend lint:
-
-```powershell
-cd frontend
-npm run lint
-```
-
-Result:
-
-```text
-No lint errors reported.
-```
-
-Browser route verification:
-
-```text
-/buyer/dashboard       -> Good morning, Maya
-/buyer/marketplace     -> Marketplace
-/buyer/crop/CR-1048    -> Tomatoes
-/buyer/orders          -> My orders
-/buyer/profile         -> Your profile
-```
-
-Browser interaction verification:
-
-```text
-Marketplace search "Mango" -> 6 cards reduced to 1 matching card.
-Place order submission -> Your order request has been noted for this session.
-Profile submission -> Buyer profile changes saved for this session.
-Mobile navigation -> Buyer sidebar drawer opened successfully.
-```
-
-No database, marketplace API, order API, authentication, JWT, or real persistence was added.
-
----
-
-### Milestone 5: Robust Frontend Form Validation
-
-#### Objective
-
-Add clear, frontend-only validation to every form currently available in AgriConnect. Invalid submissions are blocked with inline field messages, and valid submissions show the existing temporary success states. No form calls the backend.
-
-#### Shared validation helpers
-
-Added `frontend/src/utils/formValidation.js` with reusable rules for:
-
-- Email format
-- 10-digit Indian phone numbers, including optional `+91`
-- Required text fields
-- Positive numeric values
-
-Added shared visual treatment for invalid fields and inline error messages in `frontend/src/index.css`.
-
-#### Forms updated
-
-1. **Register**
-
-- Full name required and minimum 3 characters
-- Valid email required
-- Valid 10-digit Indian phone required
-- Password required and minimum 8 characters
-- Confirm password must match
-- Farmer or Buyer role required
-
-2. **Login**
-
-- Email required
-- Valid email format
-- Password required
-
-3. **Add Crop**
-
-- Crop name required
-- Category required
-- Quantity required and greater than 0
-- Price required and greater than 0
-- Harvest date required
-- Region required
-
-4. **Edit Profile**
-
-- Farmer and buyer profile forms now validate required names, farm/company details, email, Indian phone number, and location/region.
-
-5. **Marketplace order form**
-
-- Quantity required
-- Quantity must be greater than 0
-- Quantity cannot exceed the selected crop's static available quantity
-
-#### Validation behavior
-
-- Errors render next to the relevant field.
-- Invalid fields receive a visible error border and background treatment.
-- Invalid submissions never display the success message.
-- Valid submissions display temporary success feedback.
-- No `alert()` calls were added.
-- Native browser constraints do not replace the custom messages for the order quantity boundary checks.
-
-#### Manual browser test results
-
-```text
-Register invalid empty submission -> 6 inline errors, no success state.
-Register valid submission -> "Your account details are ready. Welcome to the network."
-
-Login invalid empty submission -> 2 inline errors, no success state.
-Login valid submission -> "Thanks, your sign-in is ready for the next step."
-
-Add Crop invalid empty submission -> 6 inline errors, no success state.
-Add Crop valid submission -> "Your crop listing is ready to review."
-
-Farmer Profile invalid values -> 5 inline errors, no success state.
-Farmer Profile valid values -> "Profile changes saved for this session."
-
-Buyer Profile invalid values -> 5 inline errors, no success state.
-Buyer Profile valid values -> "Buyer profile changes saved for this session."
-
-Order quantity 0 -> "Quantity must be greater than 0."
-Order quantity above available stock -> "Quantity cannot exceed 1,200 kg available."
-Order quantity within stock -> "Your order request has been noted for this session."
-```
-
-#### Verification output
-
-```powershell
-cd frontend
-npm run build
-npm run lint
-```
-
-Result:
-
-```text
-44 modules transformed.
-Built successfully.
-No lint errors reported.
-```
-
-No backend, database, authentication, JWT, or real form persistence was added.
-
-## 4. Current Project Structure
-
-```text
-AgriConnect/
-|-- implementation.md
-|-- README.md
-|-- backend/
-|   |-- config/db.js
-|   |-- controllers/
-|   |-- middleware/
-|   |-- models/userModel.js
-|   |-- routes/
-|   |-- tests/
-|   |-- utils/
-|   |-- server.js
-|   |-- swagger.js
-|   `-- package.json
-`-- frontend/
-    |-- public/
-    |   |-- agriconnect-emblem.png
-    |   |-- agriconnect-story.png
-    |   |-- favicon.svg
-    |   `-- icons.svg
-    |-- src/
-    |   |-- components/
-    |   |-- context/AuthContext.jsx
-    |   |-- data/
-    |   |-- pages/
-    |   |   |-- buyer/
-    |   |   `-- farmer/
-    |   |-- queries/
-    |   |-- schemas/
-    |   |-- services/api.js
-    |   `-- utils/
-    |-- index.html
-    |-- package.json
-    `-- vite.config.js
-```
-
-## 5. How To Run The Project
-
-### Run the frontend
-
-```powershell
-cd frontend
-npm install
-npm run dev
-```
-
-The Vite server normally starts at:
-
-```text
-http://localhost:5173
-```
-
-If that port is already in use, Vite selects another available port and prints it in the terminal.
-
-### Run the backend
-
-```powershell
-cd backend
-npm install
-copy .env.example .env
-npm run dev
-```
-
-The backend normally starts at:
-
-```text
-http://localhost:5000
-```
-
-Health check URL:
-
-```text
-http://localhost:5000/api/health
-```
-
-## 6. Remaining Work
-
-These are not implemented in the current codebase:
-
-- Crop listing schema, database model, and farmer crop CRUD endpoints.
-- Persistent buyer marketplace queries and crop detail endpoints.
-- Order schema, database model, order creation, status changes, and buyer/farmer order endpoints.
-- Connect the crop, dashboard, and order screens to working backend APIs instead of mock initial data.
-- Live analytics, market pricing, recommendations, and farmer/buyer activity derived from persisted records.
-- Automated tests for crop and order workflows after those APIs are implemented.
-- Password reset, email verification, account deletion, and refresh-token/session renewal flows.
-- Production deployment, Docker configuration, and deployment-specific environment/security review.
-- AI assistant, RAG/FAISS/LLM, government scheme matching, and multilingual support.
-
-The mock crop/order/analytics UI is useful for frontend demonstration, but it must not be described as persistent marketplace functionality.
-
-## 7. Recommended Next Workflow
-
-1. Design the crop and order PostgreSQL schemas and their ownership/authorization rules.
-2. Implement and test farmer crop CRUD, marketplace listing/detail, and buyer order workflows.
-3. Connect the existing TanStack Query screens to those APIs and remove mock initial data as each workflow becomes real.
-4. Add integration tests for role access, validation, and persistence.
-5. Implement analytics/recommendations after reliable crop and order data exists.
-6. Add AI/scheme/multilingual features, then Docker and production deployment.
-
----
-
-### Milestone 6: Clean Express Backend Architecture
-
-#### Objective
-
-Set up a maintainable Node.js and Express backend foundation without implementing authentication, database tables, Supabase, or business APIs.
-
-#### Backend structure created
-
-```text
-backend/
-|-- config/
-|   `-- db.js
-|-- controllers/
-|   `-- healthController.js
-|-- middleware/
-|   `-- errorHandler.js
-|-- routes/
-|   `-- healthRoutes.js
-|-- models/
-|   `-- .gitkeep
-|-- utils/
-|   `-- .gitkeep
-|-- .env
-|-- .env.example
-|-- server.js
-|-- package.json
-`-- package-lock.json
-```
-
-#### Backend packages configured
-
-- Node.js
-- Express
-- dotenv
-- cors
-- bcrypt
-- jsonwebtoken
-- pg
-- Nodemon for development
-
-#### Server configuration implemented
-
-- Express application setup
-- JSON request parsing
-- CORS middleware
-- Environment loading through dotenv
-- Central 404 API handler
-- Central error-handling middleware
-- Separated health controller and route
-- Lazy PostgreSQL pool factory reserved for the database milestone
-
-The PostgreSQL pool factory is not called during server startup, so this milestone does not open a database connection.
-
-#### Health endpoint
-
-`GET /api/health`
-
-Response:
-
-```json
-{
-  "success": true,
-  "message": "AgriConnect API is running"
-}
-```
-
-#### 404 response
-
-Unknown API routes return structured JSON:
-
-```json
-{
-  "success": false,
-  "message": "Route not found: GET /api/missing"
-}
-```
-
-#### Environment safety
-
-- `backend/.env` is ignored by Git through the root `.gitignore`.
-- `backend/.env.example` contains variable names with empty values only:
-
-```text
-PORT=5000
-DATABASE_URL=
-JWT_SECRET=
-```
-
-- No secret, Supabase key, JWT value, or database credential is stored in source code.
-
-#### Verification output
-
-Backend start command:
-
-```powershell
-cd backend
-npm start
-```
-
-Result:
-
-```text
-AgriConnect API listening on port 5000
-```
-
-Health test:
-
-```powershell
-Invoke-RestMethod -Uri "http://localhost:5000/api/health"
-```
-
-Result:
-
-```json
-{ "success": true, "message": "AgriConnect API is running" }
-```
-
-404 middleware test:
-
-```json
-{ "success": false, "message": "Route not found: GET /api/missing" }
-```
-
-No authentication, JWT logic, database tables, Supabase connection, or business API was added.
-
----
-
-### Milestone 7: Supabase PostgreSQL Connection and Users Table
-
-#### Objective
-
-Connect the Express backend to Supabase PostgreSQL through `DATABASE_URL`, verify the connection, and create the initial users table. Registration, login, JWT, crop tables, and order tables remain deferred.
-
-#### Work completed
-
-1. Added a shared `pg.Pool` in `backend/config/db.js`.
-2. Added Supabase-compatible SSL configuration without hardcoding credentials.
-3. Added a guarded database connection test using `SELECT 1`.
-4. Added PostgreSQL pool error handling that logs a safe error message.
-5. Added startup database initialization.
-6. Added an idempotent `users` table initializer using `CREATE TABLE IF NOT EXISTS`.
-7. Added a unique constraint on `users.email`.
-8. Added a role constraint allowing only `farmer` and `buyer`.
-9. Added `created_at` with a database timestamp default.
-10. Added `GET /api/health/db`.
-11. Added safe `503` JSON response handling when database health checks fail.
-12. Updated `.env` and `.env.example` to use `PORT`, `DATABASE_URL`, and `JWT_SECRET`.
-13. Updated README instructions without recording any database credential.
-
-#### Users table schema
-
-```text
-users
-|-- id          UUID primary key
-|-- name        VARCHAR(120) not null
-|-- email       VARCHAR(255) unique not null
-|-- phone       VARCHAR(20) not null
-|-- password    TEXT not null
-|-- role        VARCHAR(20), farmer or buyer only
-`-- created_at  TIMESTAMPTZ with NOW() default
-```
-
-The `password` column is designed to store a bcrypt hash in a later authentication milestone. No registration code currently writes to this table, and no plaintext password is inserted.
-
-#### Database health endpoint
-
-`GET /api/health/db`
-
-Successful response:
-
-```json
-{
-  "success": true,
-  "message": "Database connection successful"
-}
-```
-
-Connection failures return HTTP `503` without exposing the connection string or database error details:
-
-```json
-{
-  "success": false,
-  "message": "Database connection failed"
-}
-```
-
-#### Verification output
-
-Backend startup:
-
-```powershell
-cd backend
-npm start
-```
-
-Result:
-
-```text
-AgriConnect API listening on port 5000
-```
-
-Base health endpoint:
-
-```json
-{ "success": true, "message": "AgriConnect API is running" }
-```
-
-Database health endpoint:
-
-```json
-{ "success": true, "message": "Database connection successful" }
-```
-
-Direct schema verification returned these column names:
-
-```text
-id,name,email,phone,password,role,created_at
-```
-
-No registration, login, JWT, crop table, order table, or Supabase Auth implementation was added at the time this milestone was completed. Later milestones below supersede the authentication statements.
-
----
-
-### Milestone 8: User Registration, Login, and Protected Sessions
-
-#### Objective
-
-Connect the existing account screens to the Express API and persist user accounts in PostgreSQL.
-
-#### Work completed
-
-1. Added `POST /api/auth/register` with server-side validation and duplicate-email handling.
-2. Hash registration passwords with bcrypt before inserting them into the users table.
-3. Added `POST /api/auth/login` with bcrypt password verification and one-day JWT issuance.
-4. Added bearer-token middleware that verifies JWTs and attaches authenticated identity to the request.
-5. Added role-protected farmer and buyer frontend routes.
-6. Connected login and registration forms to the API, including loading states and server error feedback.
-7. Added browser session storage for the JWT and user payload, session restoration, and logout cleanup.
-8. Added the shared JSON error response format and Swagger API documentation.
-
-#### API behavior
-
-- Registration returns `201` and a safe user payload; password hashes are not returned.
-- Login returns `200`, a JWT, and a safe user payload.
-- Invalid credentials return `401`; invalid registration fields return `400`; duplicate email returns `409`.
-- Protected routes require `Authorization: Bearer <token>`.
-
----
-
-### Milestone 9: Authenticated Current-User Profile API
-
-#### Objective
-
-Read and update the currently authenticated account using the user ID verified from the JWT.
-
-#### Work completed
-
-1. Added `GET /api/auth/me` to fetch the current user from PostgreSQL.
-2. Limited the response to safe profile fields: ID, name, email, phone, role, farm/company name, location, and creation date. Password fields are excluded.
-3. Added optional `farm_name`, `company_name`, and `location` user columns during idempotent database initialization.
-4. Added `PATCH /api/auth/me` with role-aware validation, duplicate-email protection, and a database update for the authenticated account.
-5. Connected farmer and buyer profile forms to the PATCH endpoint.
-6. Updated React auth state and local storage from the successful server response so the header, dashboard greeting, and profile view refresh immediately.
-7. Reset profile form fields when the authenticated profile is loaded or updated.
-
-Profile edits are committed when the user submits **Save changes**; they are not written on each keystroke. Changing a profile photo is still a placeholder.
-
----
-
-### Milestone 10: Global API 404 and Brand Context
-
-#### Work completed
-
-1. Kept the global not-found middleware after the documentation, auth, and health routes.
-2. Standardized unmatched-route responses to JSON:
-
-```json
-{
-  "success": false,
-  "message": "API endpoint not found",
-  "path": "/api/this-route-does-not-exist"
-}
-```
-
-3. Added regression coverage for the unknown-route response and for `GET /api/health` continuing to return `200`.
-4. Replaced the shared logo's placeholder symbol with the supplied emblem at `frontend/public/agriconnect-emblem.png`; the same file is used as the favicon.
-5. Added the supplied farmer/buyer harvest illustration at `frontend/public/agriconnect-story.png` in the existing landing-page harvest-story section.
-
-#### Verification
-
-On 2026-09-28, `npm --prefix backend test -- --test-force-exit` completed with **15 passing tests and 0 failures**. The suite covers health, registration, login, authentication, current-user read/update, and unknown API routes. The frontend production build completed successfully after the landing-page image change.
+The project is no longer in a pure mock-only phase for backend functionality, but the frontend still contains several demo-backed flows. The codebase is therefore partially live and partially demo-driven, and that distinction should be treated as a current implementation fact rather than an assumption.

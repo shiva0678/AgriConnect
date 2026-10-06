@@ -74,4 +74,28 @@ export async function initializeDatabase() {
     CREATE INDEX IF NOT EXISTS crops_category_idx ON crops (category);
     CREATE INDEX IF NOT EXISTS crops_location_idx ON crops (location);
   `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS orders (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      buyer_id UUID NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+      farmer_id UUID NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+      crop_id UUID NOT NULL REFERENCES crops(id) ON DELETE RESTRICT,
+      quantity NUMERIC(14, 2) NOT NULL CHECK (quantity > 0),
+      unit VARCHAR(20) NOT NULL DEFAULT 'kg',
+      unit_price NUMERIC(12, 2) NOT NULL CHECK (unit_price >= 0),
+      total_amount NUMERIC(14, 2) NOT NULL CHECK (total_amount >= 0),
+      status VARCHAR(20) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'confirmed', 'shipped', 'delivered', 'cancelled')),
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS orders_buyer_id_idx ON orders (buyer_id);
+    CREATE INDEX IF NOT EXISTS orders_farmer_id_idx ON orders (farmer_id);
+    CREATE INDEX IF NOT EXISTS orders_crop_id_idx ON orders (crop_id);
+    CREATE INDEX IF NOT EXISTS orders_status_idx ON orders (status);
+    CREATE INDEX IF NOT EXISTS orders_created_at_idx ON orders (created_at DESC);
+  `);
 }

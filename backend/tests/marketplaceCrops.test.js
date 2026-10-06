@@ -10,6 +10,10 @@ test('marketplace lists only available crops and supports filters, sorting, and 
   let farmerId;
   const createdCrops = [];
 
+  await pool.query('DELETE FROM orders');
+  await pool.query('DELETE FROM crops');
+  await pool.query('DELETE FROM users');
+
   try {
     const userPayload = {
       name: 'Marketplace Test Farmer',
@@ -187,6 +191,8 @@ test('marketplace lists only available crops and supports filters, sorting, and 
     assert.equal(missingDetailResponse.body.success, false);
   } finally {
     if (farmerId) {
+      await pool.query('DELETE FROM orders WHERE buyer_id = $1 OR farmer_id = $1', [farmerId]);
+      await pool.query('DELETE FROM crops WHERE farmer_id = $1', [farmerId]);
       await pool.query('DELETE FROM users WHERE id = $1', [farmerId]);
     }
   }
