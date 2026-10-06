@@ -1,8 +1,13 @@
 import { AppError } from '../utils/AppError.js';
-import { createOrder, getBuyerOrders } from '../models/orderModel.js';
+import {
+  createOrder,
+  getBuyerOrders,
+  getFarmerOrders,
+  updateFarmerOrderStatus,
+} from '../models/orderModel.js';
+import { ORDER_STATUSES } from '../utils/orderStatus.js';
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const ORDER_STATUSES = new Set(['pending', 'confirmed', 'shipped', 'delivered', 'cancelled']);
 
 function parsePositiveInteger(value, fallback) {
   if (value === undefined || value === null || value === '') {
@@ -75,6 +80,121 @@ export async function getBuyerOrdersHandler(request, response, next) {
     }
 
     next(new AppError(500, 'Unable to retrieve your orders.'));
+  }
+}
+
+export async function getFarmerOrdersHandler(request, response, next) {
+  try {
+    if (!request.user) {
+      throw new AppError(401, 'Authentication token is required.');
+    }
+
+    if (request.user.role !== 'farmer') {
+      throw new AppError(403, 'Only farmers can view their orders.');
+    }
+
+    if (request.query.page === '' || request.query.limit === '') {
+      throw new AppError(400, 'Page and limit must be positive integers.');
+    }
+
+    const page = parsePositiveInteger(request.query.page, 1);
+    if (page === null) {
+      throw new AppError(400, 'Page must be a positive integer.');
+    }
+
+    const limit = parsePositiveInteger(request.query.limit, 10);
+    if (limit === null || limit > 50) {
+      throw new AppError(400, 'Limit must be a positive integer no greater than 50.');
+    }
+
+    if (request.query.status !== undefined && typeof request.query.status !== 'string') {
+      throw new AppError(400, 'Status must be a single supported value.');
+    }
+
+    if (request.query.status !== undefined && request.query.status.trim() === '') {
+      throw new AppError(400, 'Status must be one of: pending, confirmed, shipped, delivered, cancelled.');
+    }
+
+    const rawStatus = typeof request.query.status === 'string'
+      ? request.query.status.trim().toLowerCase()
+      : '';
+
+    if (rawStatus && !ORDER_STATUSES.has(rawStatus)) {
+      throw new AppError(400, 'Status must be one of: pending, confirmed, shipped, delivered, cancelled.');
+    }
+
+    const { orders, total } = await getFarmerOrders({
+      farmerId: request.user.id,
+      status: rawStatus || null,
+      page,
+      limit,
+    });
+
+    response.status(200).json({
+      success: true,
+      orders: orders.map((order) => ({
+        ...order,
+        quantity: Number(order.quantity),
+        unit_price: Number(order.unit_price),
+        total_amount: Number(order.total_amount),
+      })),
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: total === 0 ? 0 : Math.ceil(total / limit),
+      },
+    });
+  } catch (error) {
+    if (error instanceof AppError) {
+      return next(error);
+    }
+
+    next(new AppError(500, 'Unable to retrieve your orders.'));
+  }
+}
+
+export async function updateFarmerOrderStatusHandler(request, response, next) {
+  try {
+    if (!request.user) {
+      throw new AppError(401, 'Authentication token is required.');
+    }
+
+    if (request.user.role !== 'farmer') {
+      throw new AppError(403, 'Only farmers can update order status.');
+    }
+
+    if (!UUID_PATTERN.test(request.params.id)) {
+      throw new AppError(400, 'Invalid order ID.');
+    }
+
+    const rawStatus = request.body?.status;
+    if (typeof rawStatus !== 'string' || !ORDER_STATUSES.has(rawStatus.trim().toLowerCase())) {
+      throw new AppError(400, 'A valid order status is required.');
+    }
+
+    const order = await updateFarmerOrderStatus({
+      orderId: request.params.id,
+      farmerId: request.user.id,
+      status: rawStatus.trim().toLowerCase(),
+    });
+
+    response.status(200).json({
+      success: true,
+      message: 'Order status updated successfully',
+      order: {
+        ...order,
+        quantity: Number(order.quantity),
+        unit_price: Number(order.unit_price),
+        total_amount: Number(order.total_amount),
+      },
+    });
+  } catch (error) {
+    if (error instanceof AppError) {
+      return next(error);
+    }
+
+    next(new AppError(500, 'Unable to update order status.'));
   }
 }
 
