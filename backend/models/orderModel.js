@@ -1,6 +1,58 @@
 import { pool } from '../config/db.js';
 import { AppError } from '../utils/AppError.js';
 
+export async function getBuyerOrders({ buyerId, page, limit, status = null }) {
+  const normalizedPage = Number(page) || 1;
+  const normalizedLimit = Number(limit) || 10;
+  const offset = (normalizedPage - 1) * normalizedLimit;
+  const conditions = ['o.buyer_id = $1'];
+  const values = [buyerId];
+
+  if (status) {
+    conditions.push(`o.status = $${values.length + 1}`);
+    values.push(status);
+  }
+
+  const countQuery = `
+    SELECT COUNT(*)::int AS total
+    FROM orders o
+    WHERE ${conditions.join(' AND ')}`;
+
+  const listingQuery = `
+    SELECT
+      o.id,
+      o.buyer_id,
+      o.farmer_id,
+      o.crop_id,
+      o.quantity,
+      o.unit,
+      o.unit_price,
+      o.total_amount,
+      o.status,
+      o.created_at,
+      o.updated_at,
+      c.name AS crop_name,
+      c.category AS crop_category,
+      c.location AS crop_location,
+      COALESCE(u.farm_name, u.name) AS farmer_name
+    FROM orders o
+    JOIN crops c ON c.id = o.crop_id
+    JOIN users u ON u.id = o.farmer_id
+    WHERE ${conditions.join(' AND ')}
+    ORDER BY o.created_at DESC, o.id DESC
+    LIMIT $${values.length + 1} OFFSET $${values.length + 2}`;
+
+  const [countResult, listingResult] = await Promise.all([
+    pool.query(countQuery, values),
+    pool.query(listingQuery, [...values, normalizedLimit, offset]),
+  ]);
+
+  return {
+    orders: listingResult.rows,
+    total: Number(countResult.rows[0]?.total ?? 0),
+  };
+}
+
 export async function createOrder({ buyerId, cropId, quantity }) {
   const normalizedQuantity = Number(quantity);
 
