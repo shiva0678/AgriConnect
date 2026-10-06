@@ -29,7 +29,7 @@ This document records the current implementation status as of 2026-10-06 and is 
 
 ## 3. Verified backend implementation
 
-The backend is currently functional for account and crop infrastructure.
+The backend is currently functional for account, crop, and buyer-order infrastructure.
 
 ### Auth and profile
 
@@ -66,6 +66,23 @@ Database and route support are in place for crop workflows:
 
 These routes enforce ownership and role-based access on the server side.
 
+### Order foundation and transactional order creation
+
+The backend includes the Phase 4A database schema and the Phase 4B buyer order creation flow:
+
+- PostgreSQL `orders` table creation with foreign keys and validation constraints
+- `POST /api/orders` for authenticated buyers only
+- buyer-only authorization enforcement
+- crop validation for UUID, existence, marketplace availability, and stock sufficiency
+- server-side price snapshot from the crop record
+- server-side total amount calculation
+- pending order status assignment
+- transactional stock reduction with rollback safety
+- sold-out transition when quantity reaches zero
+- consistent API JSON error responses for validation and business-conflict cases
+
+This order creation route is intentionally scoped to buyer order placement only; it does not add GET, status, or cancellation endpoints.
+
 ## 4. Current API surface
 
 | Method              | Endpoint             | Status           |
@@ -82,6 +99,7 @@ These routes enforce ownership and role-based access on the server side.
 | GET                 | `/api/crops/:id`     | Implemented      |
 | PATCH               | `/api/crops/:id`     | Implemented      |
 | DELETE              | `/api/crops/:id`     | Implemented      |
+| POST                | `/api/orders`        | Implemented      |
 | GET                 | `/api/docs`          | Implemented      |
 | GET                 | `/api/docs.json`     | Implemented      |
 | Any unmatched route | —                    | JSON 404 handler |
@@ -118,26 +136,25 @@ This is the main source of the current mismatch: the backend is live and validat
 
 ## 6. Verification
 
-The backend test command was run in the current workspace and logged the auth/profile checks as they executed. The command output in this session showed the API starting and the protected auth flow checks running, but the final summary line was not captured before the terminal timed out.
+The backend test suite was run in the current workspace and confirmed the implemented backend behavior remains green.
 
-Command used:
+Fresh verification command:
 
 ```powershell
-npm --prefix C:\Users\shiva\OneDrive\Desktop\AgriConnect\backend test -- --test-force-exit
+cd "C:\Users\shiva\OneDrive\Desktop\AgriConnect\backend" && npm test -- --test-reporter=tap
 ```
 
-Observed output included:
+Current result from the fresh run:
 
-- API startup on port 5000
-- Login validation checks
-- Missing-token and invalid-token rejection checks
-- Authenticated profile read and update checks
+- 29 tests total
+- 29 passed
+- 0 failed
 
-This section therefore reflects the verified runtime state of the codebase rather than a final pass/fail count.
+This includes the auth, crop, marketplace, detail, order schema, and buyer order-creation checks.
 
 ## 7. Current project priority
 
-The immediate next priority is frontend-to-backend integration for crop actions, not further backend feature expansion. The backend foundation already supports the implemented phases; the remaining gap is connecting the live UI to the live database-backed endpoints.
+The immediate next priority is frontend-to-backend integration for crop and order actions, not further backend feature expansion. The backend foundation already supports the implemented phases; the remaining gap is connecting the live UI to the live database-backed endpoints.
 
 ## 8. Recommended next steps
 

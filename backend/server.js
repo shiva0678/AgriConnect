@@ -6,6 +6,7 @@ import { initializeDatabase } from "./config/db.js";
 import authRoutes from "./routes/authRoutes.js";
 import healthRoutes from "./routes/healthRoutes.js";
 import cropRoutes from "./routes/cropRoutes.js";
+import orderRoutes from "./routes/orderRoutes.js";
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler.js";
 import { swaggerSpec } from "./swagger.js";
 
@@ -26,6 +27,7 @@ app.get("/api/docs.json", (request, response) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/health", healthRoutes);
 app.use("/api", cropRoutes);
+app.use("/api", orderRoutes);
 
 app.use(notFoundHandler);
 app.use(errorHandler);
