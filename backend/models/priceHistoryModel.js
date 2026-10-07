@@ -63,7 +63,7 @@ export async function insertPriceHistory(record) {
   return result.rows[0] || null;
 }
 
-export async function insertManyPriceHistory(records) {
+export async function insertManyPriceHistory(records, queryable = pool) {
   if (!Array.isArray(records)) {
     throw new TypeError('Price history records must be an array.');
   }
@@ -79,7 +79,7 @@ export async function insertManyPriceHistory(records) {
     return `(${placeholders.join(', ')})`;
   });
 
-  const result = await pool.query(
+  const result = await queryable.query(
     `INSERT INTO price_history (${PRICE_HISTORY_COLUMNS.join(', ')})
      VALUES ${tuples.join(', ')}
      ON CONFLICT DO NOTHING

@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "nodemon server.js",
     "start": "node server.js",
-    "test": "node --test --test-concurrency=1"
+    "test": "node --test --test-concurrency=1",
+    "import:prices": "node scripts/importPriceHistory.js"
   },
   "keywords": [],
   "author": "",
