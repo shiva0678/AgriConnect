@@ -1,6 +1,8 @@
 import cors from "cors";
 import dotenv from "dotenv";
 import express from "express";
+import { resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import swaggerUi from "swagger-ui-express";
 import { initializeDatabase } from "./config/db.js";
 import authRoutes from "./routes/authRoutes.js";
@@ -44,6 +46,13 @@ async function startServer() {
   }
 }
 
-startServer();
+const isMainModule = process.argv[1]
+  && resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+
+if (isMainModule) {
+  startServer();
+} else {
+  await initializeDatabase();
+}
 
 export default app;

@@ -98,4 +98,48 @@ export async function initializeDatabase() {
     CREATE INDEX IF NOT EXISTS orders_status_idx ON orders (status);
     CREATE INDEX IF NOT EXISTS orders_created_at_idx ON orders (created_at DESC);
   `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS price_history (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      commodity TEXT NOT NULL CHECK (BTRIM(commodity) <> ''),
+      variety TEXT,
+      grade TEXT,
+      market TEXT NOT NULL CHECK (BTRIM(market) <> ''),
+      district TEXT,
+      state TEXT NOT NULL CHECK (BTRIM(state) <> ''),
+      arrival_date DATE NOT NULL,
+      min_price NUMERIC(14, 2) CHECK (min_price IS NULL OR min_price >= 0),
+      max_price NUMERIC(14, 2) CHECK (max_price IS NULL OR max_price >= 0),
+      modal_price NUMERIC(14, 2) CHECK (modal_price IS NULL OR modal_price >= 0),
+      created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      CHECK (min_price IS NULL OR max_price IS NULL OR min_price <= max_price),
+      CHECK (
+        modal_price IS NULL OR min_price IS NULL OR max_price IS NULL OR
+        modal_price BETWEEN min_price AND max_price
+      )
+    )
+  `);
+
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS price_history_commodity_idx ON price_history (commodity);
+    CREATE INDEX IF NOT EXISTS price_history_state_idx ON price_history (state);
+    CREATE INDEX IF NOT EXISTS price_history_market_idx ON price_history (market);
+    CREATE INDEX IF NOT EXISTS price_history_district_idx ON price_history (district);
+    CREATE INDEX IF NOT EXISTS price_history_arrival_date_idx ON price_history (arrival_date);
+    CREATE INDEX IF NOT EXISTS price_history_commodity_arrival_date_idx
+      ON price_history (commodity, arrival_date DESC);
+    CREATE UNIQUE INDEX IF NOT EXISTS price_history_observation_uidx ON price_history (
+      commodity,
+      COALESCE(variety, ''),
+      COALESCE(grade, ''),
+      market,
+      COALESCE(district, ''),
+      state,
+      arrival_date,
+      COALESCE(min_price, -1),
+      COALESCE(max_price, -1),
+      COALESCE(modal_price, -1)
+    );
+  `);
 }

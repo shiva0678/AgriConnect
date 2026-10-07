@@ -4,7 +4,7 @@
 
 AgriConnect is a full-stack marketplace prototype for farmer-to-buyer crop transactions. The project combines a React frontend with an Express API and a PostgreSQL-backed user/crop foundation.
 
-This document records the current implementation status as of 2026-10-06 and is intended to reflect the actual codebase rather than older milestone notes.
+This document records the current implementation status as of 2026-10-07 and is intended to reflect the actual codebase rather than older milestone notes.
 
 ## 2. Current technology stack
 
@@ -29,7 +29,7 @@ This document records the current implementation status as of 2026-10-06 and is 
 
 ## 3. Verified backend implementation
 
-The backend is currently functional for account, crop, and buyer-order infrastructure.
+The backend is currently functional for account, crop, marketplace, and buyer/farmer order workflows.
 
 ### Auth and profile
 
@@ -66,9 +66,9 @@ Database and route support are in place for crop workflows:
 
 These routes enforce ownership and role-based access on the server side.
 
-### Order foundation and transactional order creation
+### Order workflows
 
-The backend includes the Phase 4A database schema and the Phase 4B buyer order creation flow:
+The backend includes the Phase 4A order schema and the Phase 4B-4D buyer/farmer order flows:
 
 - PostgreSQL `orders` table creation with foreign keys and validation constraints
 - `POST /api/orders` for authenticated buyers only
@@ -80,33 +80,44 @@ The backend includes the Phase 4A database schema and the Phase 4B buyer order c
 - transactional stock reduction with rollback safety
 - sold-out transition when quantity reaches zero
 - consistent API JSON error responses for validation and business-conflict cases
+- `GET /api/orders` for authenticated buyers to view their own order history
+- buyer order pagination, status filtering, and newest-first ordering
+- historical order price and total read from the stored order snapshot
+- `GET /api/farmer/orders` for authenticated farmers to view only orders assigned to them
+- farmer order pagination, status filtering, crop information, and safe buyer display names
+- `PATCH /api/orders/:id/status` for a farmer to update only their own order status
+- explicit transitions: pending to confirmed/cancelled, confirmed to shipped/cancelled, and shipped to delivered
+- row-locked status updates that preserve order creation time, historical values, and crop stock
 
-This order creation route is intentionally scoped to buyer order placement only; it does not add GET, status, or cancellation endpoints.
+Status cancellation is supported only from pending or confirmed states through the farmer status endpoint; there is no separate cancellation API.
 
 ## 4. Current API surface
 
-| Method              | Endpoint             | Status           |
-| ------------------- | -------------------- | ---------------- |
-| GET                 | `/api/health`        | Implemented      |
-| GET                 | `/api/health/db`     | Implemented      |
-| POST                | `/api/auth/register` | Implemented      |
-| POST                | `/api/auth/login`    | Implemented      |
-| GET                 | `/api/auth/me`       | Implemented      |
-| PATCH               | `/api/auth/me`       | Implemented      |
-| GET                 | `/api/crops`         | Implemented      |
-| POST                | `/api/crops`         | Implemented      |
-| GET                 | `/api/farmer/crops`  | Implemented      |
-| GET                 | `/api/crops/:id`     | Implemented      |
-| PATCH               | `/api/crops/:id`     | Implemented      |
-| DELETE              | `/api/crops/:id`     | Implemented      |
-| POST                | `/api/orders`        | Implemented      |
-| GET                 | `/api/docs`          | Implemented      |
-| GET                 | `/api/docs.json`     | Implemented      |
-| Any unmatched route | —                    | JSON 404 handler |
+| Method              | Endpoint                 | Status           |
+| ------------------- | ------------------------ | ---------------- |
+| GET                 | `/api/health`            | Implemented      |
+| GET                 | `/api/health/db`         | Implemented      |
+| POST                | `/api/auth/register`     | Implemented      |
+| POST                | `/api/auth/login`        | Implemented      |
+| GET                 | `/api/auth/me`           | Implemented      |
+| PATCH               | `/api/auth/me`           | Implemented      |
+| GET                 | `/api/crops`             | Implemented      |
+| POST                | `/api/crops`             | Implemented      |
+| GET                 | `/api/farmer/crops`      | Implemented      |
+| GET                 | `/api/crops/:id`         | Implemented      |
+| PATCH               | `/api/crops/:id`         | Implemented      |
+| DELETE              | `/api/crops/:id`         | Implemented      |
+| POST                | `/api/orders`            | Implemented      |
+| GET                 | `/api/orders`            | Implemented      |
+| GET                 | `/api/farmer/orders`     | Implemented      |
+| PATCH               | `/api/orders/:id/status` | Implemented      |
+| GET                 | `/api/docs`              | Implemented      |
+| GET                 | `/api/docs.json`         | Implemented      |
+| Any unmatched route | —                        | JSON 404 handler |
 
 ## 5. Frontend status and key limitation
 
-The frontend shell and many role-based pages are present and render correctly, but the crop, marketplace, and add-crop flows are still not fully connected to the live backend.
+The frontend shell and role-based pages are present and compile successfully, but crop, marketplace, and order workflows are still not fully connected to live backend data.
 
 ### What is still mock-backed
 
@@ -116,7 +127,7 @@ The following flows remain demo data driven in the frontend:
 - Add-crop form submission
 - Buyer marketplace list and filters
 - Buyer crop detail screens
-- Order history and order actions
+- Buyer and farmer order history and order actions
 - Static dashboard metrics and seeded product data
 
 Relevant frontend files still show the mock pattern:
@@ -132,29 +143,38 @@ Relevant frontend files still show the mock pattern:
 
 The app is visually built as a full product, but not every screen is wired to the database-backed API yet. In the current implementation, a crop created in the farmer form will not appear in the UI unless the frontend form is connected to the real `POST /api/crops` flow and the inventory query is set to fetch the real farmer list instead of mock data.
 
-This is the main source of the current mismatch: the backend is live and validated, but the frontend still uses mock data in several user flows.
+This is the main source of the current mismatch: the backend is live and validated, but the frontend still uses mock/initial data in several user flows. No browser-based end-to-end verification of live frontend-to-backend flows has been performed.
 
 ## 6. Verification
 
-The backend test suite was run in the current workspace and confirmed the implemented backend behavior remains green.
+The backend test suite and frontend build/lint checks were run in the current workspace.
 
-Fresh verification command:
+Backend verification command:
 
 ```powershell
-cd "C:\Users\shiva\OneDrive\Desktop\AgriConnect\backend" && npm test -- --test-reporter=tap
+npm --prefix backend test -- --test-reporter=tap
 ```
 
-Current result from the fresh run:
+Latest complete backend result:
 
-- 29 tests total
-- 29 passed
+- 47 tests total
+- 47 passed
 - 0 failed
 
-This includes the auth, crop, marketplace, detail, order schema, and buyer order-creation checks.
+The suite includes auth, crop CRUD, marketplace and detail, order schema and creation, buyer order history, and farmer order management/status transitions. It runs serially because the database-backed tests share PostgreSQL state.
+
+Frontend verification commands:
+
+```powershell
+npm --prefix frontend run build
+npm --prefix frontend run lint
+```
+
+The production build succeeded. Lint exited successfully with three warnings in `frontend/src/context/AuthContext.jsx`: an unused catch parameter, a Fast Refresh export warning, and a synchronous state update in an effect. `git diff --check` also passed. These checks do not replace browser-based end-to-end verification.
 
 ## 7. Current project priority
 
-The immediate next priority is frontend-to-backend integration for crop and order actions, not further backend feature expansion. The backend foundation already supports the implemented phases; the remaining gap is connecting the live UI to the live database-backed endpoints.
+The immediate next priority is frontend-to-backend integration for crop and order actions, not further backend feature expansion. The backend supports buyer order history and farmer order management; the remaining gap is connecting the live UI to the live database-backed endpoints and verifying those flows in a browser.
 
 ## 8. Recommended next steps
 
