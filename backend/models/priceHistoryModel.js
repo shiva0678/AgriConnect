@@ -44,6 +44,45 @@ const PRICE_HISTORY_READ_COLUMNS = `
   max_price,
   modal_price`;
 
+export function buildPriceHistoryFilters({ commodity, state, market, district, search, fromDate, toDate } = {}) {
+  const conditions = [];
+  const values = [];
+
+  for (const [column, value] of Object.entries({ commodity, state, market, district })) {
+    if (value !== undefined && value !== null && String(value).trim() !== '') {
+      values.push(String(value).trim());
+      conditions.push(`${column} ILIKE $${values.length}`);
+    }
+  }
+
+  if (search !== undefined && search !== null && String(search).trim() !== '') {
+    values.push(`%${String(search).trim()}%`);
+    const searchParameter = `$${values.length}`;
+    conditions.push(`(
+      commodity ILIKE ${searchParameter} OR
+      variety ILIKE ${searchParameter} OR
+      market ILIKE ${searchParameter} OR
+      district ILIKE ${searchParameter} OR
+      state ILIKE ${searchParameter}
+    )`);
+  }
+
+  if (fromDate !== undefined && fromDate !== null) {
+    values.push(fromDate);
+    conditions.push(`arrival_date >= $${values.length}`);
+  }
+
+  if (toDate !== undefined && toDate !== null) {
+    values.push(toDate);
+    conditions.push(`arrival_date <= $${values.length}`);
+  }
+
+  return {
+    whereClause: conditions.length ? `WHERE ${conditions.join(' AND ')}` : '',
+    values,
+  };
+}
+
 function normalizeOptionalText(value) {
   if (value === undefined || value === null) {
     return null;
@@ -134,39 +173,15 @@ export async function findPriceHistory({
     throw new TypeError('Price history offset must be a non-negative integer.');
   }
 
-  const conditions = [];
-  const values = [];
-
-  for (const [column, value] of Object.entries({ commodity, state, market, district })) {
-    if (value !== undefined && value !== null && String(value).trim() !== '') {
-      values.push(String(value).trim());
-      conditions.push(`${column} ILIKE $${values.length}`);
-    }
-  }
-
-  if (search !== undefined && search !== null && String(search).trim() !== '') {
-    values.push(`%${String(search).trim()}%`);
-    const searchParameter = `$${values.length}`;
-    conditions.push(`(
-      commodity ILIKE ${searchParameter} OR
-      variety ILIKE ${searchParameter} OR
-      market ILIKE ${searchParameter} OR
-      district ILIKE ${searchParameter} OR
-      state ILIKE ${searchParameter}
-    )`);
-  }
-
-  if (fromDate !== undefined && fromDate !== null) {
-    values.push(fromDate);
-    conditions.push(`arrival_date >= $${values.length}`);
-  }
-
-  if (toDate !== undefined && toDate !== null) {
-    values.push(toDate);
-    conditions.push(`arrival_date <= $${values.length}`);
-  }
-
-  const whereClause = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+  const { whereClause, values } = buildPriceHistoryFilters({
+    commodity,
+    state,
+    market,
+    district,
+    search,
+    fromDate,
+    toDate,
+  });
   const orderBy = PRICE_HISTORY_SORTS[sort];
   if (!orderBy) {
     throw new TypeError('Unsupported price history sort value.');

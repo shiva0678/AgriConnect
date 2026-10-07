@@ -10,6 +10,7 @@ import healthRoutes from "./routes/healthRoutes.js";
 import cropRoutes from "./routes/cropRoutes.js";
 import orderRoutes from "./routes/orderRoutes.js";
 import priceHistoryRoutes from "./routes/priceHistoryRoutes.js";
+import priceAnalyticsRoutes from "./routes/priceAnalyticsRoutes.js";
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler.js";
 import { swaggerSpec } from "./swagger.js";
 
@@ -32,6 +33,7 @@ app.use("/api/health", healthRoutes);
 app.use("/api", cropRoutes);
 app.use("/api", orderRoutes);
 app.use("/api", priceHistoryRoutes);
+app.use("/api", priceAnalyticsRoutes);
 
 app.use(notFoundHandler);
 app.use(errorHandler);

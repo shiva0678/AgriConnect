@@ -16,6 +16,26 @@ const options = {
           bearerFormat: 'JWT',
         },
       },
+      schemas: {
+        PriceBreakdown: {
+          type: 'object',
+          properties: {
+            market: { type: 'string' },
+            state: { type: 'string' },
+            commodity: { type: 'string' },
+            averageModalPrice: { type: 'number', nullable: true },
+            minimumModalPrice: { type: 'number', nullable: true },
+            maximumModalPrice: { type: 'number', nullable: true },
+            recordCount: { type: 'integer' },
+          },
+          required: [
+            'averageModalPrice',
+            'minimumModalPrice',
+            'maximumModalPrice',
+            'recordCount',
+          ],
+        },
+      },
     },
     servers: [
       {
