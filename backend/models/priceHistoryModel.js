@@ -25,6 +25,24 @@ const RETURNING_COLUMNS = `
   max_price,
   modal_price,
   created_at`;
+const PRICE_HISTORY_SORTS = {
+  newest: 'arrival_date DESC, id DESC',
+  oldest: 'arrival_date ASC, id ASC',
+  price_asc: 'modal_price ASC NULLS LAST, id ASC',
+  price_desc: 'modal_price DESC NULLS LAST, id DESC',
+};
+const PRICE_HISTORY_READ_COLUMNS = `
+  id,
+  commodity,
+  variety,
+  grade,
+  market,
+  district,
+  state,
+  arrival_date::text AS arrival_date,
+  min_price,
+  max_price,
+  modal_price`;
 
 function normalizeOptionalText(value) {
   if (value === undefined || value === null) {
@@ -95,11 +113,19 @@ export async function findPriceHistory({
   state,
   market,
   district,
+  search,
   fromDate,
   toDate,
+  page = 1,
   limit = 100,
   offset = 0,
+  sort = 'newest',
+  includeTotal = false,
 } = {}) {
+  if (!Number.isSafeInteger(page) || page <= 0) {
+    throw new TypeError('Price history page must be a positive integer.');
+  }
+
   if (!Number.isSafeInteger(limit) || limit <= 0) {
     throw new TypeError('Price history limit must be a positive integer.');
   }
@@ -114,8 +140,20 @@ export async function findPriceHistory({
   for (const [column, value] of Object.entries({ commodity, state, market, district })) {
     if (value !== undefined && value !== null && String(value).trim() !== '') {
       values.push(String(value).trim());
-      conditions.push(`${column} = $${values.length}`);
+      conditions.push(`${column} ILIKE $${values.length}`);
     }
+  }
+
+  if (search !== undefined && search !== null && String(search).trim() !== '') {
+    values.push(`%${String(search).trim()}%`);
+    const searchParameter = `$${values.length}`;
+    conditions.push(`(
+      commodity ILIKE ${searchParameter} OR
+      variety ILIKE ${searchParameter} OR
+      market ILIKE ${searchParameter} OR
+      district ILIKE ${searchParameter} OR
+      state ILIKE ${searchParameter}
+    )`);
   }
 
   if (fromDate !== undefined && fromDate !== null) {
@@ -129,16 +167,34 @@ export async function findPriceHistory({
   }
 
   const whereClause = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
-  values.push(limit, offset);
+  const orderBy = PRICE_HISTORY_SORTS[sort];
+  if (!orderBy) {
+    throw new TypeError('Unsupported price history sort value.');
+  }
 
-  const result = await pool.query(
-    `SELECT ${RETURNING_COLUMNS}
-     FROM price_history
-     ${whereClause}
-     ORDER BY arrival_date DESC, created_at DESC, id DESC
-     LIMIT $${values.length - 1} OFFSET $${values.length}`,
-    values
-  );
+  const countValues = [...values];
+  const listingValues = [...values, limit, (page - 1) * limit + offset];
+  const [countResult, listingResult] = await Promise.all([
+    pool.query(
+      `SELECT COUNT(*)::int AS total
+       FROM price_history
+       ${whereClause}`,
+      countValues
+    ),
+    pool.query(
+      `SELECT ${PRICE_HISTORY_READ_COLUMNS}
+       FROM price_history
+       ${whereClause}
+       ORDER BY ${orderBy}
+       LIMIT $${listingValues.length - 1} OFFSET $${listingValues.length}`,
+      listingValues
+    ),
+  ]);
 
-  return result.rows;
+  const result = {
+    prices: listingResult.rows,
+    total: Number(countResult.rows[0]?.total ?? 0),
+  };
+
+  return includeTotal ? result : result.prices;
 }
