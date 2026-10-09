@@ -24,7 +24,9 @@ function BuyerMarketplace() {
     () =>
       marketplaceCrops.filter(
         (crop) =>
-          crop.name.toLowerCase().includes(deferredQuery.toLowerCase()) &&
+          `${crop.name} ${crop.farmer} ${crop.region}`
+            .toLowerCase()
+            .includes(deferredQuery.toLowerCase()) &&
           (category === "All categories" || crop.category === category) &&
           (region === "All regions" || crop.shortRegion === region) &&
           crop.priceValue <= maxPrice,
@@ -38,6 +40,9 @@ function BuyerMarketplace() {
       setQuery(nextValue);
     });
   };
+  const availableRegions = [
+    ...new Set(marketplaceCrops.map((crop) => crop.shortRegion).filter(Boolean)),
+  ].sort();
 
   if (isLoading) {
     return (
@@ -70,7 +75,7 @@ function BuyerMarketplace() {
         </div>
         <div className="marketplace-note">
           <span>Updated today</span>
-          <strong>14 Apr 2026</strong>
+          <strong>{marketplaceCrops.length} active listings</strong>
         </div>
       </div>
       <section className="marketplace-toolbar">
@@ -104,10 +109,9 @@ function BuyerMarketplace() {
             onChange={(event) => setRegion(event.target.value)}
           >
             <option>All regions</option>
-            <option>Nashik</option>
-            <option>Ratnagiri</option>
-            <option>Ahmednagar</option>
-            <option>Satara</option>
+            {availableRegions.map((availableRegion) => (
+              <option key={availableRegion}>{availableRegion}</option>
+            ))}
           </select>
         </label>
         <label className="price-range">
@@ -167,11 +171,11 @@ function BuyerMarketplace() {
                 <div className="market-card__title">
                   <div>
                     <h3>{crop.name}</h3>
-                    <p>{crop.shortRegion}, Maharashtra</p>
+                    <p>{crop.region}</p>
                   </div>
                   <span className="market-card__price">
                     {crop.price}
-                    <small>/ kg</small>
+                    <small>/ {crop.unit}</small>
                   </span>
                 </div>
                 <div className="market-card__meta">

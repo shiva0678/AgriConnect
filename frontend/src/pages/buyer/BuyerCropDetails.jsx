@@ -124,10 +124,10 @@ function BuyerCropDetails() {
               <strong>{crop.quantity}</strong>
             </div>
             <div>
-              <span>Price per kg</span>
+              <span>Price per {crop.unit}</span>
               <strong>
                 {crop.price}
-                <small> / kg</small>
+                <small> / {crop.unit}</small>
               </strong>
             </div>
             <div>
@@ -158,7 +158,7 @@ function BuyerCropDetails() {
                 }
                 {...register("quantity")}
               />
-              <span>kg</span>
+              <span>{crop.unit}</span>
               {errors.quantity && (
                 <span className="field-error" id={`${quantityId}-error`}>
                   {errors.quantity.message}
@@ -193,7 +193,7 @@ function BuyerCropDetails() {
             )}
             {ordered && (
               <p className="form-success" role="status">
-                Your order request has been noted for this session.
+                Your order was placed and saved to your account.
               </p>
             )}
           </m.form>

@@ -1,39 +1,140 @@
-import { useId, useState } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useId, useState } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { addCropSchema } from "../../schemas/cropSchemas";
+import {
+  useCreateCropMutation,
+  useFarmerCropListQuery,
+  useUpdateCropMutation,
+} from "../../queries/crops";
+import { useAuth } from "../../context/AuthContext";
+import { getApiErrorMessage } from "../../utils/apiErrorMessage";
 
 function AddCrop() {
   const formId = useId();
+  const navigate = useNavigate();
+  const { cropId } = useParams();
+  const isEditing = Boolean(cropId);
+  const { user } = useAuth();
   const [saved, setSaved] = useState(false);
+  const [submitError, setSubmitError] = useState("");
+  const createCropMutation = useCreateCropMutation();
+  const updateCropMutation = useUpdateCropMutation();
+  const {
+    data: crops = [],
+    isLoading: isLoadingCrops,
+    isError: isCropListError,
+  } = useFarmerCropListQuery(isEditing ? user?.id : null);
+  const crop = isEditing ? crops.find((listing) => listing.id === cropId) : null;
   const {
     register,
     handleSubmit,
+    reset,
     formState: { errors, isSubmitting },
   } = useForm({
     resolver: zodResolver(addCropSchema),
     defaultValues: {
       name: "",
+      unit: "kg",
       category: "",
       quantity: "",
       price: "",
       harvestDate: "",
+      expiryDate: "",
       region: "",
       description: "",
     },
   });
 
-  function handleCropSubmit() {
-    setSaved(true);
+  useEffect(() => {
+    if (crop) {
+      reset({
+        name: crop.name || "",
+        unit: crop.unit || "kg",
+        category: crop.category || "",
+        quantity: String(crop.quantityValue),
+        price: String(crop.priceValue),
+        harvestDate: crop.harvest_date || "",
+        expiryDate: crop.expiry_date || "",
+        region: crop.location || "",
+        description: crop.rawDescription,
+      });
+    }
+  }, [crop, reset]);
+
+  async function handleCropSubmit(values) {
+    setSaved(false);
+    setSubmitError("");
+    const payload = {
+      name: values.name.trim(),
+      category: values.category,
+      price: Number(values.price),
+      unit: values.unit.trim(),
+      quantity: Number(values.quantity),
+      location: values.region.trim(),
+      harvest_date: values.harvestDate,
+      expiry_date: values.expiryDate || null,
+      description: values.description.trim(),
+      expected_quantity: crop?.quantityValue,
+    };
+
+    try {
+      if (isEditing) {
+        await updateCropMutation.mutateAsync({ cropId, updates: payload });
+      } else {
+        await createCropMutation.mutateAsync(payload);
+      }
+      setSaved(true);
+      navigate("/farmer/crops", {
+        state: {
+          successMessage: isEditing
+            ? "Crop listing updated successfully."
+            : "Crop listing created successfully.",
+        },
+      });
+    } catch (error) {
+      setSubmitError(
+        getApiErrorMessage(error, "Unable to publish this crop. Please try again."),
+      );
+    }
+  }
+
+  if (isEditing && isLoadingCrops) {
+    return (
+      <div className="farmer-page reveal-up">
+        <div className="page-loading">Loading crop details…</div>
+      </div>
+    );
+  }
+
+  if (isEditing && (isCropListError || !crop)) {
+    return (
+      <div className="farmer-page reveal-up">
+        <div className="form-error" role="alert">
+          {isCropListError
+            ? "Unable to load this crop. Please try again."
+            : "This crop could not be found in your inventory."}
+        </div>
+        <Link className="quiet-back" to="/farmer/crops">
+          ← Back to my crops
+        </Link>
+      </div>
+    );
   }
   return (
     <div className="farmer-page reveal-up">
       <div className="farmer-page-heading farmer-page-heading--compact">
         <div>
-          <p className="dashboard-eyebrow">My crops · New listing</p>
-          <h2>List a new crop</h2>
-          <p>Tell buyers what is growing on your farm.</p>
+          <p className="dashboard-eyebrow">
+            My crops · {isEditing ? "Edit listing" : "New listing"}
+          </p>
+          <h2>{isEditing ? `Edit ${crop.name}` : "List a new crop"}</h2>
+          <p>
+            {isEditing
+              ? "Update the details buyers see for this harvest."
+              : "Tell buyers what is growing on your farm."}
+          </p>
         </div>
         <Link className="quiet-back" to="/farmer/crops">
           ← Back to my crops
@@ -50,7 +151,7 @@ function AddCrop() {
             <div className="form-panel__heading">
               <span>01</span>
               <div>
-                <h3>Crop details</h3>
+                <h3>{isEditing ? "Update crop details" : "Crop details"}</h3>
                 <p>Start with the basics of your harvest.</p>
               </div>
             </div>
@@ -72,6 +173,31 @@ function AddCrop() {
                 {errors.name && (
                   <span className="field-error" id={`${formId}-name-error`}>
                     {errors.name.message}
+                  </span>
+                )}
+              </label>
+              <label
+                className={errors.expiryDate ? "field-invalid" : ""}
+                htmlFor={`${formId}-expiry-date`}
+              >
+                Expiry date (optional)
+                <input
+                  id={`${formId}-expiry-date`}
+                  type="date"
+                  aria-invalid={Boolean(errors.expiryDate)}
+                  aria-describedby={
+                    errors.expiryDate
+                      ? `${formId}-expiry-date-error`
+                      : undefined
+                  }
+                  {...register("expiryDate")}
+                />
+                {errors.expiryDate && (
+                  <span
+                    className="field-error"
+                    id={`${formId}-expiry-date-error`}
+                  >
+                    {errors.expiryDate.message}
                   </span>
                 )}
               </label>
@@ -99,6 +225,25 @@ function AddCrop() {
                 {errors.category && (
                   <span className="field-error" id={`${formId}-category-error`}>
                     {errors.category.message}
+                  </span>
+                )}
+              </label>
+              <label
+                className={errors.unit ? "field-invalid" : ""}
+                htmlFor={`${formId}-unit`}
+              >
+                Unit
+                <input
+                  id={`${formId}-unit`}
+                  aria-invalid={Boolean(errors.unit)}
+                  aria-describedby={errors.unit ? `${formId}-unit-error` : undefined}
+                  maxLength="20"
+                  placeholder="e.g. kg"
+                  {...register("unit")}
+                />
+                {errors.unit && (
+                  <span className="field-error" id={`${formId}-unit-error`}>
+                    {errors.unit.message}
                   </span>
                 )}
               </label>
@@ -243,17 +388,34 @@ function AddCrop() {
             <button
               type="submit"
               className="farmer-button farmer-button--primary"
-              disabled={isSubmitting}
+              disabled={
+                isSubmitting ||
+                createCropMutation.isPending ||
+                updateCropMutation.isPending
+              }
             >
-              {isSubmitting ? "Checking listing..." : "Publish listing"}{" "}
+              {isSubmitting ||
+              createCropMutation.isPending ||
+              updateCropMutation.isPending
+                ? isEditing
+                  ? "Saving changes..."
+                  : "Publishing listing..."
+                : isEditing
+                  ? "Save changes"
+                  : "Publish listing"}{" "}
               <span>↗</span>
             </button>
             <Link to="/farmer/crops" className="quiet-back">
-              Save as draft
+              {isEditing ? "Cancel" : "Save as draft"}
             </Link>
             {saved && (
               <p className="form-success" role="status">
-                Your crop listing is ready to review.
+                Your crop listing was published.
+              </p>
+            )}
+            {submitError && (
+              <p className="form-error" role="alert">
+                {submitError}
               </p>
             )}
           </div>

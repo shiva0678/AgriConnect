@@ -112,6 +112,17 @@ export async function createCropController(request, response, next) {
       crop,
     });
   } catch (error) {
+    if (
+      error.code === '23503' &&
+      error.constraint === 'crops_farmer_id_fkey'
+    ) {
+      return next(
+        new AppError(
+          401,
+          'This farmer account is no longer available. Please register again or sign in with an active farmer account.',
+        ),
+      );
+    }
     next(error);
   }
 }
@@ -159,6 +170,10 @@ export async function getCropByIdController(request, response, next) {
 }
 
 export async function updateCropController(request, response, next) {
+  if (!UUID_PATTERN.test(request.params.id)) {
+    return next(new AppError(400, 'Invalid crop ID.'));
+  }
+
   try {
     const existingCrop = await findCropById(request.params.id);
     if (!existingCrop) {
@@ -202,16 +217,42 @@ export async function updateCropController(request, response, next) {
       throw new AppError(400, 'At least one valid crop field is required for update.');
     }
 
-    const updatedCrop = await updateCrop(request.params.id, {
-      ...updatePayload,
-      price: Number(updatePayload.price),
-      quantity: Number(updatePayload.quantity),
-      description: updatePayload.description === undefined || updatePayload.description === null
+    let expectedQuantity;
+    if (request.body.expected_quantity !== undefined) {
+      expectedQuantity = Number(request.body.expected_quantity);
+      if (!Number.isFinite(expectedQuantity) || expectedQuantity < 0) {
+        throw new AppError(400, 'Expected quantity must be a non-negative number.');
+      }
+    }
+
+    if (updatePayload.price !== undefined) {
+      updatePayload.price = Number(updatePayload.price);
+    }
+    if (updatePayload.quantity !== undefined) {
+      updatePayload.quantity = Number(updatePayload.quantity);
+    }
+    if (updatePayload.description !== undefined) {
+      updatePayload.description = updatePayload.description === null
         ? null
-        : String(updatePayload.description).trim(),
-    });
+        : String(updatePayload.description).trim();
+    }
+
+    const updatedCrop = await updateCrop(
+      request.params.id,
+      updatePayload,
+      expectedQuantity,
+    );
 
     if (!updatedCrop) {
+      if (expectedQuantity !== undefined) {
+        const currentCrop = await findCropById(request.params.id);
+        if (currentCrop?.farmer_id === request.user.id) {
+          throw new AppError(
+            409,
+            'Available stock changed while you were editing. Reload the listing before saving.',
+          );
+        }
+      }
       throw new AppError(404, 'Crop not found.');
     }
 
@@ -226,6 +267,10 @@ export async function updateCropController(request, response, next) {
 }
 
 export async function deleteCropController(request, response, next) {
+  if (!UUID_PATTERN.test(request.params.id)) {
+    return next(new AppError(400, 'Invalid crop ID.'));
+  }
+
   try {
     const existingCrop = await findCropById(request.params.id);
     if (!existingCrop) {
@@ -247,6 +292,11 @@ export async function deleteCropController(request, response, next) {
       cropId: deletedCrop.id,
     });
   } catch (error) {
+    if (error.code === '23503') {
+      return next(
+        new AppError(409, 'This crop has associated orders and cannot be deleted.'),
+      );
+    }
     next(error);
   }
 }

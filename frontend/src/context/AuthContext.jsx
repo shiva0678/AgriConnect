@@ -1,4 +1,11 @@
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import {
   api,
   getStoredUser,
@@ -10,13 +17,13 @@ import {
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
   const [token, setToken] = useState(
-    localStorage.getItem("agriconnect_token") || null,
+    () => localStorage.getItem("agriconnect_token") || null,
   );
-  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState(() => getStoredUser() || null);
+  const [loading, setLoading] = useState(() => Boolean(token));
 
-  const syncUser = async (nextToken = token) => {
+  const syncUser = useCallback(async (nextToken = token) => {
     if (!nextToken) {
       setUser(null);
       setStoredUser(null);
@@ -29,33 +36,25 @@ export function AuthProvider({ children }) {
       const nextUser = response.data.user;
       setUser(nextUser);
       setStoredUser(nextUser);
-    } catch (error) {
+    } catch {
       clearAuthSession();
       setUser(null);
       setToken(null);
     } finally {
       setLoading(false);
     }
-  };
+  }, [token]);
 
   useEffect(() => {
-    const storedUser = getStoredUser();
-    const storedToken = localStorage.getItem("agriconnect_token");
-
-    setUser(storedUser || null);
-    setToken(storedToken || null);
-    setLoading(true);
-
-    if (storedToken) {
-      syncUser(storedToken);
-    } else {
-      setLoading(false);
+    if (token) {
+      syncUser(token);
     }
-  }, []);
+  }, [syncUser, token]);
 
   const login = ({ userData, authToken }) => {
     setUser(userData);
     setToken(authToken);
+    setLoading(true);
     setStoredUser(userData);
     setAuthToken(authToken);
   };
@@ -63,6 +62,7 @@ export function AuthProvider({ children }) {
   const logout = () => {
     setUser(null);
     setToken(null);
+    setLoading(false);
     clearAuthSession();
   };
 
@@ -80,7 +80,7 @@ export function AuthProvider({ children }) {
       },
       refreshUser: () => syncUser(token),
     }),
-    [user, token, loading],
+    [user, token, loading, syncUser],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

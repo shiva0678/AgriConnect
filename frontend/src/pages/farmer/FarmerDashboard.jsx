@@ -10,7 +10,7 @@ function FarmerDashboard() {
     isLoading,
     isError,
     error,
-  } = useFarmerDashboardQuery();
+  } = useFarmerDashboardQuery(user?.id);
   const firstName = user?.name?.split(" ")[0] || "Farmer";
 
   if (isLoading) {
@@ -36,7 +36,7 @@ function FarmerDashboard() {
       <div className="farmer-welcome">
         <div>
           <p className="dashboard-eyebrow">
-            Tuesday, 14 April 2026 <span /> Good morning
+            Your workspace <span /> Farmer dashboard
           </p>
           <h2>
             Good morning, {firstName} <span aria-hidden="true">✳</span>
@@ -141,11 +141,11 @@ function FarmerDashboard() {
       <section className="farmer-insight">
         <div className="farmer-insight__orb">↗</div>
         <div>
-          <p className="dashboard-eyebrow">Market note · Nashik</p>
-          <h3>Tomato demand is up this week.</h3>
+          <p className="dashboard-eyebrow">Your marketplace</p>
+          <h3>Your listings are available to buyers.</h3>
           <p>
-            Buyers around your region are looking for consistent supply between
-            1,000 and 2,000 kg.
+            Keep crop quantities and harvest details up to date so buyers can
+            make informed orders.
           </p>
         </div>
         <Link

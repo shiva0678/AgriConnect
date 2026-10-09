@@ -2,6 +2,24 @@ const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PHONE_REGEX = /^[6-9]\d{9}$/;
 const VALID_ROLES = new Set(['farmer', 'buyer']);
 
+function parseDateOnly(value) {
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return null;
+  }
+
+  const [year, month, day] = value.split('-').map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  if (
+    date.getUTCFullYear() !== year ||
+    date.getUTCMonth() !== month - 1 ||
+    date.getUTCDate() !== day
+  ) {
+    return null;
+  }
+
+  return date;
+}
+
 export function validateCropInput(payload = {}) {
   const name = String(payload.name ?? '').trim();
   const category = String(payload.category ?? '').trim();
@@ -46,12 +64,15 @@ export function validateCropInput(payload = {}) {
     return 'Harvest date is required.';
   }
 
-  if (payload.expiry_date) {
-    const harvestDate = new Date(payload.harvest_date);
-    const expiryDate = new Date(payload.expiry_date);
+  const harvestDate = parseDateOnly(payload.harvest_date);
+  if (!harvestDate) {
+    return 'Harvest date must be a valid YYYY-MM-DD date.';
+  }
 
-    if (Number.isNaN(harvestDate.getTime()) || Number.isNaN(expiryDate.getTime())) {
-      return 'Harvest and expiry dates must be valid ISO date strings.';
+  if (payload.expiry_date) {
+    const expiryDate = parseDateOnly(payload.expiry_date);
+    if (!expiryDate) {
+      return 'Expiry date must be a valid YYYY-MM-DD date.';
     }
 
     if (expiryDate < harvestDate) {

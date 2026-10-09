@@ -1,35 +1,34 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { buyerOrders } from "../data/buyerMockData";
-import { farmerOrders } from "../data/farmerMockData";
 import { api } from "../services/api";
-import { cropKeys } from "./crops";
+import { cropKeys, mapOrder } from "./crops";
 
 export const orderKeys = {
-  buyer: ["orders", "buyer"],
-  farmer: ["orders", "farmer"],
+  all: ["orders"],
+  buyer: (buyerId) => ["orders", "buyer", buyerId],
+  farmer: (farmerId) => ["orders", "farmer", farmerId],
   detail: (orderId) => ["orders", "detail", orderId],
 };
 
-export function useBuyerOrdersQuery() {
+export function useBuyerOrdersQuery(buyerId) {
   return useQuery({
-    queryKey: orderKeys.buyer,
+    queryKey: orderKeys.buyer(buyerId),
     queryFn: async () => {
-      const response = await api.get("/orders");
-      return response.data;
+      const response = await api.get("/orders", { params: { limit: 50 } });
+      return (response.data.orders || []).map((order) => mapOrder(order, "buyer"));
     },
-    initialData: buyerOrders,
+    enabled: Boolean(buyerId),
     staleTime: 1000 * 60 * 2,
   });
 }
 
-export function useFarmerOrdersQuery() {
+export function useFarmerOrdersQuery(farmerId) {
   return useQuery({
-    queryKey: orderKeys.farmer,
+    queryKey: orderKeys.farmer(farmerId),
     queryFn: async () => {
-      const response = await api.get("/farmer/orders");
-      return response.data;
+      const response = await api.get("/farmer/orders", { params: { limit: 50 } });
+      return (response.data.orders || []).map((order) => mapOrder(order, "farmer"));
     },
-    initialData: farmerOrders,
+    enabled: Boolean(farmerId),
     staleTime: 1000 * 60 * 2,
   });
 }
@@ -40,11 +39,29 @@ export function usePlaceOrderMutation() {
   return useMutation({
     mutationFn: async ({ cropId, quantity }) => {
       const response = await api.post("/orders", { cropId, quantity });
-      return response.data;
+      return response.data.order;
     },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: orderKeys.buyer });
+      queryClient.invalidateQueries({ queryKey: orderKeys.all });
       queryClient.invalidateQueries({ queryKey: cropKeys.detail(variables.cropId) });
+      queryClient.invalidateQueries({ queryKey: cropKeys.list() });
+      queryClient.invalidateQueries({ queryKey: ["crops", "farmer"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard", "farmer"] });
+    },
+  });
+}
+
+export function useUpdateFarmerOrderStatusMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ orderId, status }) => {
+      const response = await api.patch(`/orders/${orderId}/status`, { status });
+      return response.data.order;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: orderKeys.all });
+      queryClient.invalidateQueries({ queryKey: ["dashboard", "farmer"] });
     },
   });
 }

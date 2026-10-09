@@ -2,18 +2,38 @@ import { Link } from "react-router-dom";
 import { m } from "framer-motion";
 import { useAuth } from "../../context/AuthContext";
 import { getCropImage } from "../../data/cropImagery";
-import { buyerOrders, marketplaceCrops } from "../../data/buyerMockData";
+import { useMarketplaceCropsQuery } from "../../queries/crops";
+import { useBuyerOrdersQuery } from "../../queries/orders";
 
 function BuyerDashboard() {
   const { user } = useAuth();
+  const {
+    data: marketplaceCrops = [],
+    isLoading: cropsLoading,
+    isError: cropsError,
+  } = useMarketplaceCropsQuery();
+  const {
+    data: buyerOrders = [],
+    isLoading: ordersLoading,
+    isError: ordersError,
+  } = useBuyerOrdersQuery(user?.id);
   const firstName = user?.name?.split(" ")[0] || "Buyer";
+  const activeOrders = buyerOrders.filter(
+    (order) => !["Delivered", "Cancelled"].includes(order.status),
+  ).length;
+  const deliveredOrders = buyerOrders.filter(
+    (order) => order.status === "Delivered",
+  ).length;
+  const deliveredRate = buyerOrders.length
+    ? Math.round((deliveredOrders / buyerOrders.length) * 100)
+    : 0;
 
   return (
     <div className="farmer-page reveal-up buyer-page">
       <div className="farmer-welcome">
         <div>
           <p className="dashboard-eyebrow">
-            Tuesday, 14 April 2026 <span /> Buyer workspace
+            Your workspace <span /> Buyer dashboard
           </p>
           <h2>
             Good morning, {firstName} <span aria-hidden="true">✳</span>
@@ -43,8 +63,8 @@ function BuyerDashboard() {
         >
           <span className="farmer-stat__icon">⌕</span>
           <p>Available crops</p>
-          <strong>126</strong>
-          <small>Across 9 regions</small>
+          <strong>{cropsLoading ? "…" : cropsError ? "—" : marketplaceCrops.length}</strong>
+          <small>Live marketplace listings</small>
         </m.article>
         <m.article
           className="farmer-stat farmer-stat--gold"
@@ -56,8 +76,8 @@ function BuyerDashboard() {
         >
           <span className="farmer-stat__icon">◷</span>
           <p>Active orders</p>
-          <strong>04</strong>
-          <small>1 needs your attention</small>
+          <strong>{ordersLoading ? "…" : ordersError ? "—" : activeOrders}</strong>
+          <small>Pending, confirmed, or shipped</small>
         </m.article>
         <m.article
           className="farmer-stat farmer-stat--blue"
@@ -69,8 +89,8 @@ function BuyerDashboard() {
         >
           <span className="farmer-stat__icon">✓</span>
           <p>Delivered this month</p>
-          <strong>12</strong>
-          <small>98% on time</small>
+          <strong>{ordersLoading ? "…" : ordersError ? "—" : deliveredOrders}</strong>
+          <small>{deliveredRate}% of loaded orders</small>
         </m.article>
         <m.article
           className="farmer-stat farmer-stat--rose"
@@ -81,9 +101,9 @@ function BuyerDashboard() {
           transition={{ duration: 0.3, ease: "easeOut" }}
         >
           <span className="farmer-stat__icon">⌁</span>
-          <p>Saved farmers</p>
-          <strong>08</strong>
-          <small>Across 3 regions</small>
+          <p>Farmers sourced from</p>
+          <strong>{buyerOrders.length ? new Set(buyerOrders.map((order) => order.farmer)).size : 0}</strong>
+          <small>Farmers you have ordered from</small>
         </m.article>
       </m.div>
       <div className="buyer-dashboard-grid">
@@ -110,11 +130,15 @@ function BuyerDashboard() {
                 <span>
                   <strong>{crop.name}</strong>
                   <small>
-                    {crop.shortRegion} · {crop.price}/kg
+                    {crop.shortRegion} · {crop.price}/{crop.unit}
                   </small>
                 </span>
               </Link>
             ))}
+            {!cropsLoading && !cropsError && marketplaceCrops.length === 0 && (
+              <p>No available listings yet.</p>
+            )}
+            {cropsError && <p className="form-error" role="alert">Marketplace is unavailable right now.</p>}
           </div>
         </section>
         <section className="farmer-panel buyer-orders-preview">
@@ -145,6 +169,10 @@ function BuyerDashboard() {
               </span>
             </div>
           ))}
+          {!ordersLoading && !ordersError && buyerOrders.length === 0 && (
+            <p>You have not placed any orders yet.</p>
+          )}
+          {ordersError && <p className="form-error" role="alert">Unable to load your orders.</p>}
         </section>
       </div>
       <section className="buyer-quote">

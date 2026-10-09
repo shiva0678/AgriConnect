@@ -85,6 +85,7 @@ function AppRoutes() {
             <Route path="dashboard" element={<LazyFarmerDashboard />} />
             <Route path="crops" element={<LazyFarmerCrops />} />
             <Route path="add-crop" element={<LazyAddCrop />} />
+            <Route path="crops/:cropId/edit" element={<LazyAddCrop />} />
             <Route path="orders" element={<LazyFarmerOrders />} />
             <Route path="profile" element={<LazyFarmerProfile />} />
           </Route>
