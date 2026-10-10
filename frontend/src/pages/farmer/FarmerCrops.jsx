@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "../../context/AuthContext";
 import {
   useDeleteCropMutation,
@@ -15,7 +15,23 @@ function FarmerCrops() {
   const [actionError, setActionError] = useState("");
   const [successMessage] = useState(location.state?.successMessage || "");
   const [selectedStatus, setSelectedStatus] = useState("All crops");
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [filterDraft, setFilterDraft] = useState({
+    category: "",
+    region: "",
+    minPrice: "",
+    maxPrice: "",
+  });
+  const [appliedFilters, setAppliedFilters] = useState({
+    category: "",
+    region: "",
+    minPrice: "",
+    maxPrice: "",
+  });
+  const [filterError, setFilterError] = useState("");
   const [page, setPage] = useState(1);
+  const filterRef = useRef(null);
+  const filterButtonRef = useRef(null);
   const deleteCropMutation = useDeleteCropMutation();
   const {
     data: cropListings = [],
@@ -23,12 +39,27 @@ function FarmerCrops() {
     isError,
     error,
   } = useFarmerCropListQuery(user?.id);
-  const filteredCrops = useMemo(
-    () => selectedStatus === "All crops"
-      ? cropListings
-      : cropListings.filter((crop) => crop.status === selectedStatus),
-    [cropListings, selectedStatus],
+  const categories = useMemo(
+    () => [...new Set(cropListings.map((crop) => crop.category).filter(Boolean))].sort(),
+    [cropListings],
   );
+  const filteredCrops = useMemo(() => {
+    const minPrice = appliedFilters.minPrice === ""
+      ? null
+      : Number(appliedFilters.minPrice);
+    const maxPrice = appliedFilters.maxPrice === ""
+      ? null
+      : Number(appliedFilters.maxPrice);
+    const normalizedRegion = appliedFilters.region.trim().toLocaleLowerCase();
+
+    return cropListings.filter((crop) => (
+      (selectedStatus === "All crops" || crop.status === selectedStatus)
+      && (!appliedFilters.category || crop.category === appliedFilters.category)
+      && (!normalizedRegion || crop.region.toLocaleLowerCase().includes(normalizedRegion))
+      && (minPrice === null || crop.priceValue >= minPrice)
+      && (maxPrice === null || crop.priceValue <= maxPrice)
+    ));
+  }, [appliedFilters, cropListings, selectedStatus]);
   const pageCount = Math.max(1, Math.ceil(filteredCrops.length / pageSize));
   const currentPage = Math.min(page, pageCount);
   const visibleCrops = filteredCrops.slice(
@@ -42,10 +73,66 @@ function FarmerCrops() {
     }
   }, [location.pathname, location.state, navigate]);
 
+  useEffect(() => {
+    if (!filtersOpen) return undefined;
+
+    function handlePointerDown(event) {
+      if (!filterRef.current?.contains(event.target)) {
+        setFiltersOpen(false);
+      }
+    }
+
+    function handleKeyDown(event) {
+      if (event.key === "Escape") {
+        setFiltersOpen(false);
+        filterButtonRef.current?.focus();
+      }
+    }
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [filtersOpen]);
+
   function handleStatusChange(status) {
     setSelectedStatus(status);
     setPage(1);
     setActionError("");
+    setFiltersOpen(false);
+  }
+
+  function handleFilterDraftChange(event) {
+    const { name, value } = event.target;
+    setFilterDraft((current) => ({ ...current, [name]: value }));
+    setFilterError("");
+  }
+
+  function applyFilters(event) {
+    event.preventDefault();
+    if (
+      filterDraft.minPrice !== "" &&
+      filterDraft.maxPrice !== "" &&
+      Number(filterDraft.minPrice) > Number(filterDraft.maxPrice)
+    ) {
+      setFilterError("Minimum price cannot be greater than maximum price.");
+      return;
+    }
+
+    setAppliedFilters(filterDraft);
+    setPage(1);
+    setFilterError("");
+    setFiltersOpen(false);
+  }
+
+  function clearFilters() {
+    const emptyFilters = { category: "", region: "", minPrice: "", maxPrice: "" };
+    setFilterDraft(emptyFilters);
+    setAppliedFilters(emptyFilters);
+    setFilterError("");
+    setPage(1);
   }
 
   async function handleDelete(crop) {
@@ -96,26 +183,108 @@ function FarmerCrops() {
           {successMessage}
         </p>
       )}
-      <div className="crop-toolbar">
-        <div className="crop-tabs">
-          {["All crops", "Active", "Sold"].map((status) => (
+      <div ref={filterRef}>
+        <div className="crop-toolbar">
+          <div className="crop-tabs">
+            {["All crops", "Active", "Sold"].map((status) => (
+              <button
+                className={selectedStatus === status ? "is-active" : ""}
+                key={status}
+                onClick={() => handleStatusChange(status)}
+              >
+                {status}
+                <b>
+                  {status === "All crops"
+                    ? cropListings.length
+                    : cropListings.filter((crop) => crop.status === status).length}
+                </b>
+              </button>
+            ))}
+          </div>
+          <div>
             <button
-              className={selectedStatus === status ? "is-active" : ""}
-              key={status}
-              onClick={() => handleStatusChange(status)}
+              ref={filterButtonRef}
+              className="filter-button"
+              type="button"
+              aria-expanded={filtersOpen}
+              aria-controls="crop-filter-panel"
+              onClick={() => setFiltersOpen((open) => !open)}
             >
-              {status}
-              <b>
-                {status === "All crops"
-                  ? cropListings.length
-                  : cropListings.filter((crop) => crop.status === status).length}
-              </b>
+              ⌘ Filter <span>{filtersOpen ? "⌃" : "⌄"}</span>
             </button>
-          ))}
+          </div>
         </div>
-        <button className="filter-button">
-          ⌘ Filter <span>⌄</span>
-        </button>
+        {filtersOpen && (
+          <form
+            id="crop-filter-panel"
+            className="farmer-panel crop-filter-panel"
+            aria-label="Filter crop listings"
+            onSubmit={applyFilters}
+          >
+            <div className="form-grid">
+              <label htmlFor="crop-filter-category">
+                Category
+                <select
+                  id="crop-filter-category"
+                  name="category"
+                  value={filterDraft.category}
+                  onChange={handleFilterDraftChange}
+                >
+                  <option value="">All categories</option>
+                  {categories.map((category) => (
+                    <option key={category} value={category}>{category}</option>
+                  ))}
+                </select>
+              </label>
+              <label htmlFor="crop-filter-region">
+                Growing region
+                <input
+                  id="crop-filter-region"
+                  name="region"
+                  type="search"
+                  value={filterDraft.region}
+                  onChange={handleFilterDraftChange}
+                  placeholder="Any region"
+                />
+              </label>
+              <label htmlFor="crop-filter-min-price">
+                Minimum price
+                <input
+                  id="crop-filter-min-price"
+                  name="minPrice"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={filterDraft.minPrice}
+                  onChange={handleFilterDraftChange}
+                  placeholder="No minimum"
+                />
+              </label>
+              <label htmlFor="crop-filter-max-price">
+                Maximum price
+                <input
+                  id="crop-filter-max-price"
+                  name="maxPrice"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={filterDraft.maxPrice}
+                  onChange={handleFilterDraftChange}
+                  placeholder="No maximum"
+                />
+              </label>
+            </div>
+            {filterError && <p className="form-error" role="alert">{filterError}</p>}
+            <div className="crop-filter-panel__actions">
+              <button className="farmer-button farmer-button--primary" type="submit">
+                Apply filters
+              </button>
+              <button className="quiet-back" type="button" onClick={clearFilters}>
+                Clear filters
+              </button>
+            </div>
+          </form>
+        )}
       </div>
       <div className="farmer-table-wrap">
         <table className="farmer-table">
@@ -186,7 +355,7 @@ function FarmerCrops() {
         <p>
           {cropListings.length === 0
             ? "No crop listings found. Add a crop to get started."
-            : "No crops match this status."}
+            : "No crops match the selected status and filters."}
         </p>
       )}
       <div className="farmer-table-foot">
