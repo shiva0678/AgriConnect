@@ -15,6 +15,9 @@ const navigation = [
   { to: "/farmer/dashboard", label: "Overview", icon: "⌂" },
   { to: "/farmer/crops", label: "My crops", icon: "◫" },
   { to: "/farmer/orders", label: "Orders", icon: "◌", badge: "6" },
+  { to: "/farmer/price-history", label: "Price history", icon: "◷" },
+  { to: "/farmer/price-analytics", label: "Price analytics", icon: "⌁" },
+  { to: "/farmer/price-assistant", label: "Price assistant", icon: "✳" },
   { to: "/farmer/profile", label: "Profile", icon: "◎" },
 ];
 

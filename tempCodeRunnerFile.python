@@ -1,0 +1,33 @@
+
+graph = {}
+
+n = int(input("Enter number of nodes: "))
+nodes = input("Enter node names: ").split()
+
+for node in nodes:
+    graph[node] = []
+
+e = int(input("Enter number of edges: "))
+
+for i in range(e):
+    u, v = input("Enter edge: ").split()
+    graph[u].append(v)
+    graph[v].append(u)
+
+start = input("Enter start node: ")
+
+visited = set()
+queue = [start]
+
+print("BFS Traversal:")
+
+while queue:
+    node = queue.pop(0)
+
+    if node not in visited:
+        print(node, end=" ")
+        visited.add(node)
+
+        for neighbour in graph[node]:
+            if neighbour not in visited:
+                queue.append(neighbour)

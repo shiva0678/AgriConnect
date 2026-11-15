@@ -15,6 +15,9 @@ const navigation = [
   { to: "/buyer/dashboard", label: "Overview", icon: "⌂" },
   { to: "/buyer/marketplace", label: "Marketplace", icon: "⌕" },
   { to: "/buyer/orders", label: "My orders", icon: "◌", badge: "4" },
+  { to: "/buyer/price-history", label: "Price history", icon: "◷" },
+  { to: "/buyer/price-analytics", label: "Price analytics", icon: "⌁" },
+  { to: "/buyer/price-assistant", label: "Price assistant", icon: "✳" },
   { to: "/buyer/profile", label: "Profile", icon: "◎" },
 ];
 

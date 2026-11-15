@@ -12,6 +12,7 @@ import orderRoutes from "./routes/orderRoutes.js";
 import priceHistoryRoutes from "./routes/priceHistoryRoutes.js";
 import priceAnalyticsRoutes from "./routes/priceAnalyticsRoutes.js";
 import demandOutlookRoutes from "./routes/demandOutlookRoutes.js";
+import priceAssistantRoutes from "./routes/priceAssistantRoutes.js";
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler.js";
 import { swaggerSpec } from "./swagger.js";
 
@@ -36,6 +37,7 @@ app.use("/api", orderRoutes);
 app.use("/api", priceHistoryRoutes);
 app.use("/api", priceAnalyticsRoutes);
 app.use("/api", demandOutlookRoutes);
+app.use("/api", priceAssistantRoutes);
 
 app.use(notFoundHandler);
 app.use(errorHandler);

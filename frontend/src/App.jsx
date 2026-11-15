@@ -26,6 +26,11 @@ const LazyBuyerCropDetails = lazy(
 );
 const LazyBuyerOrders = lazy(() => import("./pages/buyer/BuyerOrders"));
 const LazyBuyerProfile = lazy(() => import("./pages/buyer/BuyerProfile"));
+const LazyPriceAssistant = lazy(
+  () => import("./pages/shared/PriceAssistant"),
+);
+const LazyPriceHistory = lazy(() => import("./pages/shared/PriceHistory"));
+const LazyPriceAnalytics = lazy(() => import("./pages/shared/PriceAnalytics"));
 
 function RouteFallback() {
   return <div className="page-loading">Loading workspace…</div>;
@@ -87,6 +92,9 @@ function AppRoutes() {
             <Route path="add-crop" element={<LazyAddCrop />} />
             <Route path="crops/:cropId/edit" element={<LazyAddCrop />} />
             <Route path="orders" element={<LazyFarmerOrders />} />
+            <Route path="price-history" element={<LazyPriceHistory />} />
+            <Route path="price-analytics" element={<LazyPriceAnalytics />} />
+            <Route path="price-assistant" element={<LazyPriceAssistant />} />
             <Route path="profile" element={<LazyFarmerProfile />} />
           </Route>
           <Route
@@ -102,6 +110,9 @@ function AppRoutes() {
             <Route path="marketplace" element={<LazyBuyerMarketplace />} />
             <Route path="crop/:id" element={<LazyBuyerCropDetails />} />
             <Route path="orders" element={<LazyBuyerOrders />} />
+            <Route path="price-history" element={<LazyPriceHistory />} />
+            <Route path="price-analytics" element={<LazyPriceAnalytics />} />
+            <Route path="price-assistant" element={<LazyPriceAssistant />} />
             <Route path="profile" element={<LazyBuyerProfile />} />
           </Route>
         </Routes>
