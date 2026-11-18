@@ -41,9 +41,9 @@ function BreakdownTable({ title, nameKey, rows }) {
             <thead>
               <tr>
                 <th scope="col">{title.replace(" breakdown", "")}</th>
-                <th scope="col">Average modal</th>
-                <th scope="col">Minimum</th>
-                <th scope="col">Maximum</th>
+                <th scope="col">Average modal (INR/quintal)</th>
+                <th scope="col">Minimum (INR/quintal)</th>
+                <th scope="col">Maximum (INR/quintal)</th>
                 <th scope="col">Records</th>
               </tr>
             </thead>
@@ -115,7 +115,7 @@ function TrendChart({ trend }) {
   return (
     <div className="price-analytics-chart">
       <div className="price-analytics-chart__legend">
-        <span><i /> Average modal price by observation date</span>
+        <span><i /> Average modal price (INR/quintal) by observation date</span>
         <span>Historical daily averages · not a forecast</span>
       </div>
       <div className="price-analytics-svg-wrap">
@@ -148,7 +148,7 @@ function TrendChart({ trend }) {
               r={modalPoints.length > 80 ? 1.8 : 3.5}
               className="price-analytics-point"
             >
-              <title>{`${point.date}: ${formatPrice(point.avgModalPrice)} average modal price`}</title>
+              <title>{`${point.date}: INR ${formatPrice(point.avgModalPrice)} per quintal average modal price`}</title>
             </circle>
           ))}
           <text x={padding.left} y={height - 13} className="price-analytics-axis-label">{dates[0]}</text>
@@ -207,7 +207,7 @@ function PriceAnalytics() {
 
       <div className="price-data-notice" role="note">
         <span aria-hidden="true">i</span>
-        <p><strong>Historical observations only.</strong> {observationNotice} Currency and measurement units are not specified by this data source.</p>
+        <p><strong>Historical observations only.</strong> Prices are shown in INR per quintal (100 kg), following the AGMARKNET source convention; the imported CSV does not include a unit column. {observationNotice}</p>
       </div>
 
       <section className="price-data-panel">
@@ -245,11 +245,11 @@ function PriceAnalytics() {
           <section className="price-analytics-summary" aria-label="Price summary statistics">
             {[
               ["Matching observations", summary?.totalRecords, "◉", true],
-              ["Average minimum price", summary?.averageMinPrice, "↓"],
-              ["Average maximum price", summary?.averageMaxPrice, "↑"],
-              ["Average modal price", summary?.averageModalPrice, "≈"],
-              ["Lowest modal price", summary?.minimumPrice, "⌄"],
-              ["Highest modal price", summary?.maximumPrice, "⌃"],
+              ["Average minimum (INR/quintal)", summary?.averageMinPrice, "↓"],
+              ["Average maximum (INR/quintal)", summary?.averageMaxPrice, "↑"],
+              ["Average modal (INR/quintal)", summary?.averageModalPrice, "≈"],
+              ["Lowest modal (INR/quintal)", summary?.minimumPrice, "⌄"],
+              ["Highest modal (INR/quintal)", summary?.maximumPrice, "⌃"],
             ]
               .filter(([, value]) => value !== null && value !== undefined)
               .map(([label, value, icon, isCount]) => (
@@ -257,7 +257,7 @@ function PriceAnalytics() {
                   <span className="price-analytics-metric__icon" aria-hidden="true">{icon}</span>
                   <span>{label}</span>
                   <strong>{isCount ? Number(value).toLocaleString("en-IN") : formatPrice(value)}</strong>
-                  <small>{isCount ? "matching records" : "unit not specified"}</small>
+                  <small>{isCount ? "matching records" : "INR per quintal"}</small>
                 </article>
               ))}
           </section>

@@ -1,6 +1,6 @@
 import { useEffect, useId, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { addCropSchema } from "../../schemas/cropSchemas";
 import {
@@ -10,6 +10,7 @@ import {
 } from "../../queries/crops";
 import { useAuth } from "../../context/AuthContext";
 import { getApiErrorMessage } from "../../utils/apiErrorMessage";
+import FairPriceIndicator from "./FairPriceIndicator";
 
 function AddCrop() {
   const formId = useId();
@@ -31,6 +32,7 @@ function AddCrop() {
     register,
     handleSubmit,
     reset,
+    control,
     formState: { errors, isSubmitting },
   } = useForm({
     resolver: zodResolver(addCropSchema),
@@ -45,6 +47,10 @@ function AddCrop() {
       region: "",
       description: "",
     },
+  });
+  const [watchedName, watchedPrice, watchedUnit, watchedLocation] = useWatch({
+    control,
+    name: ["name", "price", "unit", "region"],
   });
 
   useEffect(() => {
@@ -384,6 +390,12 @@ function AddCrop() {
               what makes your crop different.
             </p>
           </div>
+          <FairPriceIndicator
+            commodity={watchedName}
+            price={watchedPrice}
+            unit={watchedUnit}
+            location={watchedLocation}
+          />
           <div className="form-actions">
             <button
               type="submit"

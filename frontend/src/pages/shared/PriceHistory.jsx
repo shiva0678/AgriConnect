@@ -95,7 +95,7 @@ function PriceHistory() {
 
       <div className="price-data-notice" role="note">
         <span aria-hidden="true">i</span>
-        <p><strong>Historical data only.</strong> Records show their actual mandi observation date and are not live market prices. Currency and measurement units are not specified by this data source.</p>
+        <p><strong>Historical data only.</strong> Prices are shown in INR per quintal (100 kg), following the AGMARKNET source convention; the imported CSV does not include a unit column. Records show their actual mandi observation date and are not live market prices.</p>
       </div>
 
       <section className="price-data-panel">
@@ -171,9 +171,9 @@ function PriceHistory() {
                     <th scope="col">District</th>
                     <th scope="col">Market</th>
                     <th scope="col">Arrival date</th>
-                    <th scope="col">Minimum</th>
-                    <th scope="col">Maximum</th>
-                    <th scope="col">Modal</th>
+                    <th scope="col">Minimum (INR/quintal)</th>
+                    <th scope="col">Maximum (INR/quintal)</th>
+                    <th scope="col">Modal (INR/quintal)</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -207,9 +207,9 @@ function PriceHistory() {
                   </div>
                   <p>{[price.market, price.district, price.state].filter(Boolean).join(" · ") || "Location not specified"}</p>
                   <dl>
-                    <div><dt>Minimum</dt><dd>{formatPrice(price.min_price)}</dd></div>
-                    <div><dt>Maximum</dt><dd>{formatPrice(price.max_price)}</dd></div>
-                    <div><dt>Modal</dt><dd>{formatPrice(price.modal_price)}</dd></div>
+                    <div><dt>Minimum (INR/quintal)</dt><dd>{formatPrice(price.min_price)}</dd></div>
+                    <div><dt>Maximum (INR/quintal)</dt><dd>{formatPrice(price.max_price)}</dd></div>
+                    <div><dt>Modal (INR/quintal)</dt><dd>{formatPrice(price.modal_price)}</dd></div>
                   </dl>
                 </article>
               ))}

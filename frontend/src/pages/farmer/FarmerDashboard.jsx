@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { m } from "framer-motion";
 import { useAuth } from "../../context/AuthContext";
 import { useFarmerDashboardQuery } from "../../queries/crops";
+import WastageAlerts from "./WastageAlerts";
 
 function FarmerDashboard() {
   const { user } = useAuth();
@@ -73,6 +74,7 @@ function FarmerDashboard() {
           </m.article>
         ))}
       </m.div>
+      <WastageAlerts farmerId={user?.id} />
       <div className="farmer-dashboard-grid">
         <section className="farmer-panel farmer-panel--list">
           <div className="farmer-panel__heading">

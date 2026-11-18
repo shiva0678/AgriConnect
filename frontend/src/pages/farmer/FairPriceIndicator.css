@@ -1,0 +1,162 @@
+.fair-price-indicator {
+  padding: 20px;
+  border: 1px solid #d5dfd1;
+  border-left: 3px solid #728c77;
+  background: linear-gradient(145deg, #fff, #f3f7ef);
+}
+
+.fair-price-indicator__heading {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  margin-bottom: 12px;
+}
+
+.fair-price-indicator__icon {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+  place-items: center;
+  border-radius: 50%;
+  color: #52705b;
+  background: #e6eee2;
+  font-size: 15px;
+}
+
+.fair-price-indicator .dashboard-eyebrow {
+  margin: 0 0 4px;
+  color: #7d8f7e;
+  font-size: 7px;
+}
+
+.fair-price-indicator h3 {
+  margin: 0;
+  color: var(--forest);
+  font: 700 13px var(--sans);
+}
+
+.fair-price-indicator__message,
+.fair-price-indicator__unavailable p {
+  margin: 0;
+  color: #697b6c;
+  font-size: 9px;
+  line-height: 1.7;
+}
+
+.fair-price-indicator__metrics {
+  display: grid;
+  gap: 8px;
+  margin: 13px 0;
+}
+
+.fair-price-indicator__metrics > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 7px;
+  border-bottom: 1px solid rgba(47, 87, 58, .09);
+}
+
+.fair-price-indicator__metrics dt {
+  color: #829083;
+  font-size: 8px;
+}
+
+.fair-price-indicator__metrics dd {
+  margin: 0;
+  color: #315a3d;
+  font-size: 9px;
+  font-weight: 800;
+  text-align: right;
+}
+
+.fair-price-indicator__support {
+  display: grid;
+  gap: 5px;
+  margin-top: 11px;
+  padding: 10px;
+  border-radius: 8px;
+  background: rgba(233, 241, 226, .7);
+}
+
+.fair-price-indicator__support p,
+.fair-price-indicator__support small {
+  margin: 0;
+  color: #758477;
+  font-size: 8px;
+  line-height: 1.6;
+}
+
+.fair-price-indicator__support strong {
+  color: #536c56;
+}
+
+.fair-price-indicator__unavailable {
+  display: grid;
+  gap: 6px;
+}
+
+.fair-price-indicator__unavailable > strong {
+  color: #715b35;
+  font-size: 10px;
+}
+
+.fair-price-indicator__unavailable > small,
+.fair-price-indicator__disclaimer {
+  color: #8d8874;
+  font-size: 8px;
+  line-height: 1.65;
+}
+
+.fair-price-indicator__disclaimer {
+  margin: 13px 0 0;
+  padding-top: 10px;
+  border-top: 1px solid rgba(47, 87, 58, .1);
+}
+
+.fair-price-indicator--fair-range {
+  border-color: #b7d1b3;
+  border-left-color: #4a8b5a;
+  background: linear-gradient(145deg, #fff, #eef7ea);
+}
+
+.fair-price-indicator--fair-range .fair-price-indicator__icon {
+  color: #367447;
+  background: #dcefd7;
+}
+
+.fair-price-indicator--below-reference {
+  border-color: #e0d1a6;
+  border-left-color: #c39b3d;
+  background: linear-gradient(145deg, #fff, #fbf5e5);
+}
+
+.fair-price-indicator--below-reference .fair-price-indicator__icon {
+  color: #98762d;
+  background: #f3e8c7;
+}
+
+.fair-price-indicator--above-reference {
+  border-color: #e4c4a8;
+  border-left-color: #c6783f;
+  background: linear-gradient(145deg, #fff, #fcf0e5);
+}
+
+.fair-price-indicator--above-reference .fair-price-indicator__icon {
+  color: #a45b2e;
+  background: #f5e2d0;
+}
+
+.fair-price-indicator--unavailable {
+  border-color: #ded8c4;
+  border-left-color: #9c895c;
+}
+
+@media (max-width: 700px) {
+  .fair-price-indicator { padding: 16px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fair-price-indicator { scroll-behavior: auto; }
+}

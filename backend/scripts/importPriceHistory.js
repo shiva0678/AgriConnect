@@ -24,6 +24,13 @@ export const PRICE_HISTORY_HEADERS = [
   'Modal_Price',
 ];
 
+// The AGMARKNET source convention is INR per quintal (100 kg); the CSV has no unit column.
+export const PRICE_HISTORY_SOURCE_DENOMINATION = Object.freeze({
+  currency: 'INR',
+  unit: 'quintal',
+  kilogramsPerUnit: 100,
+});
+
 const DEFAULT_BATCH_SIZE = 500;
 
 function parseCsv(content) {
