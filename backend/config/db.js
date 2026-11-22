@@ -142,4 +142,26 @@ export async function initializeDatabase() {
       COALESCE(modal_price, -1)
     );
   `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS crop_images (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      crop_id UUID NOT NULL REFERENCES crops(id) ON DELETE CASCADE,
+      gridfs_file_id CHAR(24) NOT NULL UNIQUE
+        CHECK (gridfs_file_id ~ '^[0-9a-fA-F]{24}$'),
+      content_type VARCHAR(32) NOT NULL
+        CHECK (content_type IN ('image/jpeg', 'image/png', 'image/webp')),
+      file_size INTEGER NOT NULL
+        CHECK (file_size > 0 AND file_size <= 5242880),
+      checksum CHAR(64) NOT NULL
+        CHECK (checksum ~ '^[0-9a-f]{64}$'),
+      display_order SMALLINT NOT NULL
+        CHECK (display_order BETWEEN 0 AND 4),
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE (crop_id, display_order)
+    )
+  `);
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS crop_images_crop_id_idx ON crop_images (crop_id);
+  `);
 }

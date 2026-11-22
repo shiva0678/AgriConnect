@@ -32,3 +32,10 @@ export function authenticateToken(request, response, next) {
     next(error);
   }
 }
+
+export function optionalAuthenticateToken(request, response, next) {
+  if (!request.headers.authorization) {
+    return next();
+  }
+  authenticateToken(request, response, next);
+}

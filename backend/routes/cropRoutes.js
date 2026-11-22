@@ -1,5 +1,8 @@
 import { Router } from 'express';
-import { authenticateToken } from '../middleware/authMiddleware.js';
+import {
+  authenticateToken,
+  optionalAuthenticateToken,
+} from '../middleware/authMiddleware.js';
 import {
   createCropHandler,
   deleteCropHandler,
@@ -8,6 +11,19 @@ import {
   getMarketplaceCropsController,
   updateCropHandler,
 } from '../controllers/cropController.js';
+import {
+  getCropImageController,
+  getCropImagesController,
+  uploadCropImagesController,
+} from '../controllers/cropImageController.js';
+import {
+  limitConcurrentCropImageUploads,
+  parseCropImageMultipart,
+  requireFarmerForImageUpload,
+  validateCropImageId,
+  validateCropImageParams,
+  verifyCropImageOwnership,
+} from '../middleware/cropImageUpload.js';
 
 const router = Router();
 
@@ -116,6 +132,127 @@ router.get('/crops', getMarketplaceCropsController);
  *         description: Database error
  */
 router.post('/crops', authenticateToken, createCropHandler);
+
+/**
+ * @openapi
+ * /api/crops/{cropId}/images:
+ *   get:
+ *     summary: Get image metadata for a public or owned crop
+ *     parameters:
+ *       - in: path
+ *         name: cropId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: Image metadata returned
+ *       400:
+ *         description: Invalid crop ID
+ *       404:
+ *         description: Crop not found or inaccessible
+ *       500:
+ *         description: Metadata could not be retrieved
+ */
+router.get(
+  '/crops/:cropId/images',
+  optionalAuthenticateToken,
+  validateCropImageId,
+  getCropImagesController,
+);
+
+/**
+ * @openapi
+ * /api/crops/{cropId}/images/{imageId}:
+ *   get:
+ *     summary: Stream an image for a public or owned crop
+ *     parameters:
+ *       - in: path
+ *         name: cropId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *       - in: path
+ *         name: imageId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: Verified crop image bytes
+ *       400:
+ *         description: Invalid crop or image ID
+ *       404:
+ *         description: Image not found or inaccessible
+ *       503:
+ *         description: Image storage unavailable
+ */
+router.get(
+  '/crops/:cropId/images/:imageId',
+  optionalAuthenticateToken,
+  validateCropImageParams,
+  getCropImageController,
+);
+
+/**
+ * @openapi
+ * /api/crops/{cropId}/images:
+ *   post:
+ *     summary: Upload up to five verified images for a crop owned by the authenticated farmer
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: cropId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             required: [images]
+ *             properties:
+ *               images:
+ *                 type: array
+ *                 maxItems: 5
+ *                 items:
+ *                   type: string
+ *                   format: binary
+ *     responses:
+ *       201:
+ *         description: Image metadata and GridFS identifiers saved
+ *       400:
+ *         description: Invalid upload request or image limit exceeded
+ *       401:
+ *         description: Authentication required
+ *       403:
+ *         description: Farmer role required
+ *       404:
+ *         description: Crop not found or not owned by the farmer
+ *       413:
+ *         description: Image exceeds the 5 MB limit
+ *       415:
+ *         description: Image format is unsupported
+ *       503:
+ *         description: Image storage unavailable or upload capacity full
+ */
+router.post(
+  '/crops/:cropId/images',
+  authenticateToken,
+  requireFarmerForImageUpload,
+  validateCropImageId,
+  verifyCropImageOwnership,
+  limitConcurrentCropImageUploads,
+  parseCropImageMultipart,
+  uploadCropImagesController,
+);
 
 /**
  * @openapi
