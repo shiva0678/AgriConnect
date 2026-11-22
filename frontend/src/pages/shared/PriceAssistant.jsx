@@ -47,6 +47,11 @@ function formatPrice(value) {
   }).format(Number(value));
 }
 
+function formatHistoricalPrice(value) {
+  const price = formatPrice(value);
+  return price === "Not available" ? price : `INR ${price} / quintal`;
+}
+
 function highlightAnswerValues(answer) {
   return answer
     .split(/((?:₹\s*)?\d[\d,]*(?:\.\d+)?)/g)
@@ -86,9 +91,9 @@ function SupportingData({ data }) {
         <dl className="price-assistant-stats">
           {[
             ["Observations", summary.recordCount],
-            ["Average modal", summary.averageModalPrice],
-            ["Lowest modal", summary.minimumModalPrice],
-            ["Highest modal", summary.maximumModalPrice],
+            ["Average modal (INR/quintal)", summary.averageModalPrice],
+            ["Lowest modal (INR/quintal)", summary.minimumModalPrice],
+            ["Highest modal (INR/quintal)", summary.maximumModalPrice],
           ]
             .filter(([, value]) => value !== null && value !== undefined)
             .map(([label, value], index) => (
@@ -97,8 +102,8 @@ function SupportingData({ data }) {
                   {["◉", "≈", "↓", "↑"][index]}
                 </span>
                 <dt>{label}</dt>
-                <dd>{formatPrice(value)}</dd>
-                {index > 0 && <small>Source value · unit not specified</small>}
+                <dd>{index === 0 ? value : formatHistoricalPrice(value)}</dd>
+                {index > 0 && <small>AGMARKNET source convention; CSV has no unit column</small>}
               </div>
             ))}
         </dl>
@@ -112,7 +117,7 @@ function SupportingData({ data }) {
                 <tr>
                   <th scope="col">Market</th>
                   <th scope="col">Location</th>
-                  <th scope="col">Average modal</th>
+                  <th scope="col">Average modal (INR/quintal)</th>
                   <th scope="col">Records</th>
                 </tr>
               </thead>
@@ -121,7 +126,7 @@ function SupportingData({ data }) {
                   <tr key={`${market.market}-${market.district || ""}-${index}`}>
                     <th scope="row">{market.market}</th>
                     <td>{[market.district, market.state].filter(Boolean).join(", ") || "Not specified"}</td>
-                    <td>{formatPrice(market.averageModalPrice)}</td>
+                    <td>{formatHistoricalPrice(market.averageModalPrice)}</td>
                     <td>{market.recordCount ?? "—"}</td>
                   </tr>
                 ))}
@@ -145,8 +150,8 @@ function SupportingData({ data }) {
                   </small>
                 </span>
                 <span>
-                  {formatPrice(observation.modal_price)}
-                  <small>modal price</small>
+                  {formatHistoricalPrice(observation.modal_price)}
+                  <small>recorded modal price</small>
                 </span>
               </li>
             ))}
@@ -446,7 +451,7 @@ function PriceAssistant() {
         </form>
         <div className="price-assistant-composer-note">
           <span aria-hidden="true">◇</span>
-          Price information may not include a confirmed currency or unit.
+          Historical price values follow the AGMARKNET INR/quintal convention; the imported CSV does not include a unit column.
         </div>
       </section>
     </section>

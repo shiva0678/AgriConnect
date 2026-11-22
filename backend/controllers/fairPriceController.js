@@ -11,7 +11,10 @@ export function createFairPriceController({ evaluatePrice = evaluateFairPrice } 
       const result = await evaluatePrice(request.body);
       response.status(200).json(result);
     } catch (error) {
-      next(error);
+      if (error instanceof AppError) {
+        return next(error);
+      }
+      next(new AppError(500, 'Unable to compare your price with historical data.'));
     }
   };
 }

@@ -4,7 +4,8 @@ import express from "express";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import swaggerUi from "swagger-ui-express";
-import { initializeDatabase } from "./config/db.js";
+import { initializeDatabase, pool } from "./config/db.js";
+import { closeMongoDB, initializeMongoDB } from "./config/mongo.js";
 import authRoutes from "./routes/authRoutes.js";
 import healthRoutes from "./routes/healthRoutes.js";
 import cropRoutes from "./routes/cropRoutes.js";
@@ -17,6 +18,7 @@ import fairPriceRoutes from "./routes/fairPriceRoutes.js";
 import wastageAlertRoutes from "./routes/wastageAlertRoutes.js";
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler.js";
 import { swaggerSpec } from "./swagger.js";
+import { startServerLifecycle } from "./utils/serverStartup.js";
 
 dotenv.config();
 
@@ -46,14 +48,50 @@ app.use("/api", wastageAlertRoutes);
 app.use(notFoundHandler);
 app.use(errorHandler);
 
-async function startServer() {
+export async function startServer({
+  initializePostgres = initializeDatabase,
+  initializeMongo = initializeMongoDB,
+  listen = () => app.listen(port, () => {
+    console.log(`AgriConnect API listening on port ${port}`);
+  }),
+  logger = console,
+} = {}) {
   try {
-    await initializeDatabase();
-    app.listen(port, () => {
-      console.log(`AgriConnect API listening on port ${port}`);
+    return await startServerLifecycle({
+      initializeDatabase: initializePostgres,
+      initializeMongoDB: initializeMongo,
+      listen,
+      logger,
     });
   } catch (error) {
-    console.error("Database initialization failed:", error.message);
+    logger.error("Database initialization failed:", error.message);
+    process.exitCode = 1;
+    return null;
+  }
+}
+
+async function shutdown(server, signal) {
+  console.log(`${signal} received; shutting down AgriConnect API`);
+  try {
+    await new Promise((resolve, reject) => {
+      server.close((error) => (error ? reject(error) : resolve()));
+    });
+  } catch (error) {
+    console.error("HTTP server shutdown failed:", error.message);
+    process.exitCode = 1;
+  }
+
+  try {
+    await closeMongoDB();
+  } catch {
+    console.warn("MongoDB shutdown failed.");
+    process.exitCode = 1;
+  }
+
+  try {
+    await pool.end();
+  } catch (error) {
+    console.error("PostgreSQL pool shutdown failed:", error.message);
     process.exitCode = 1;
   }
 }
@@ -62,7 +100,11 @@ const isMainModule = process.argv[1]
   && resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 
 if (isMainModule) {
-  startServer();
+  const server = await startServer();
+  if (server) {
+    process.once("SIGINT", () => shutdown(server, "SIGINT"));
+    process.once("SIGTERM", () => shutdown(server, "SIGTERM"));
+  }
 } else {
   await initializeDatabase();
 }

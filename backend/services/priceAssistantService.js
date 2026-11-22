@@ -151,6 +151,11 @@ export function createPriceAssistantService({
       const dataAsOf = rawData.summary.data_as_of || rawData.summary.dataset_as_of || null;
       const supportingData = {
         filters,
+        priceDenomination: {
+          currency: 'INR',
+          unit: 'quintal',
+          sourceConvention: 'AGMARKNET; the imported CSV does not include a unit column',
+        },
         ...data,
       };
       const source = {

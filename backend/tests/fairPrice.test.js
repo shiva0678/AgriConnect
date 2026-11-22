@@ -275,3 +275,17 @@ test('authenticated fair price requests return validation errors for invalid inp
   assert.equal(response.status, 400);
   assert.match(response.body.message, /askingPrice must be a non-negative number/);
 });
+
+test('fair price route hides unexpected internal errors', async () => {
+  const app = createRouteApp(async () => {
+    throw new Error('database connection string and query details');
+  });
+  const response = await request(app)
+    .post('/api/prices/fair-price')
+    .set('Authorization', `Bearer ${bearerToken('farmer')}`)
+    .send(baseInput);
+
+  assert.equal(response.status, 500);
+  assert.equal(response.body.message, 'Unable to compare your price with historical data.');
+  assert.doesNotMatch(response.body.message, /database connection/);
+});

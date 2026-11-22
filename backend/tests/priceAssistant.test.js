@@ -111,6 +111,11 @@ test('answers a commodity price question using database facts and the observatio
   assert.deepEqual(calls.filters[0].commodities, ['Tomato']);
   assert.equal(calls.generations.length, 1);
   assert.equal(calls.generations[0].facts.summary.averageModalPrice, 130);
+  assert.deepEqual(result.supportingData.priceDenomination, {
+    currency: 'INR',
+    unit: 'quintal',
+    sourceConvention: 'AGMARKNET; the imported CSV does not include a unit column',
+  });
   assert.match(result.answer, /Source observation date: 2024-12-24/);
   assert.match(result.answer, /single observation date/);
 });
@@ -272,6 +277,7 @@ test('uses Gemini SDK v3 generateContent request shape and configured model name
   assert.equal(receivedRequest.config.temperature, 0.1);
   assert.equal(receivedRequest.config.maxOutputTokens, 512);
   assert.equal(typeof receivedRequest.config.systemInstruction, 'string');
+  assert.match(receivedRequest.config.systemInstruction, /INR-per-quintal/);
 });
 
 test('requires authentication before the assistant controller runs', async () => {
