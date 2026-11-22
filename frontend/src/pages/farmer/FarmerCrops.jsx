@@ -6,6 +6,7 @@ import {
   useFarmerCropListQuery,
 } from "../../queries/crops";
 import { getApiErrorMessage } from "../../utils/apiErrorMessage";
+import CropImageGallery from "../../components/CropImageGallery";
 
 function FarmerCrops() {
   const pageSize = 10;
@@ -306,7 +307,15 @@ function FarmerCrops() {
               <tr key={crop.id}>
                 <td>
                   <div className="table-crop">
-                    <span className={`crop-thumb crop-thumb--${crop.tone}`} />
+                    <CropImageGallery
+                      cropId={crop.id}
+                      alt={`${crop.name} photo`}
+                      variant="thumb"
+                      className="table-crop__image"
+                      fallback={
+                        <span className={`crop-thumb crop-thumb--${crop.tone}`} />
+                      }
+                    />
                     <span>
                       <strong>{crop.name}</strong>
                       <small>

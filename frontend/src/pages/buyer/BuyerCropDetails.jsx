@@ -2,6 +2,7 @@ import { useId, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { m } from "framer-motion";
 import { getCropImage } from "../../data/cropImagery";
+import CropImageGallery from "../../components/CropImageGallery";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useCropDetailQuery } from "../../queries/crops";
@@ -86,7 +87,15 @@ function BuyerCropDetails() {
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.35, ease: "easeOut" }}
         >
-          <img src={getCropImage(crop.tone)} alt={crop.name} />
+          <CropImageGallery
+            key={crop.id}
+            cropId={crop.id}
+            alt={crop.name}
+            variant="carousel"
+            eager
+            className="crop-images-gallery--detail"
+            fallback={<img src={getCropImage(crop.tone)} alt="" />}
+          />
           <span className="market-card__tag">{crop.category}</span>
           <span className="crop-detail__stamp">
             DIRECT

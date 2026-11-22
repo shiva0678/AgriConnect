@@ -2,6 +2,7 @@ import { useDeferredValue, useMemo, useState, useTransition } from "react";
 import { Link } from "react-router-dom";
 import { AnimatePresence, m } from "framer-motion";
 import { getCropImage } from "../../data/cropImagery";
+import CropImageGallery from "../../components/CropImageGallery";
 import { useDebounce } from "../../hooks/useDebounce";
 import { useMarketplaceCropsQuery } from "../../queries/crops";
 
@@ -154,10 +155,17 @@ function BuyerMarketplace() {
                 to={`/buyer/crop/${crop.id}`}
                 className={`market-card__image buyer-crop-art buyer-crop-art--${crop.tone}`}
               >
-                <img
-                  src={getCropImage(crop.tone)}
+                <CropImageGallery
+                  cropId={crop.id}
                   alt={crop.name}
-                  loading="lazy"
+                  variant="cover"
+                  fallback={
+                    <img
+                      src={getCropImage(crop.tone)}
+                      alt=""
+                      loading="lazy"
+                    />
+                  }
                 />
                 <span className="market-card__tag">{crop.category}</span>
                 <span

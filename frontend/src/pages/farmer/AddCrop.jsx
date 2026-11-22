@@ -1,16 +1,48 @@
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { addCropSchema } from "../../schemas/cropSchemas";
 import {
+  useCropImagesQuery,
   useCreateCropMutation,
   useFarmerCropListQuery,
+  useUploadCropImagesMutation,
   useUpdateCropMutation,
 } from "../../queries/crops";
 import { useAuth } from "../../context/AuthContext";
 import { getApiErrorMessage } from "../../utils/apiErrorMessage";
+import CropImageGallery from "../../components/CropImageGallery";
 import FairPriceIndicator from "./FairPriceIndicator";
+
+const MAX_CROP_IMAGES = 5;
+const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024;
+const SUPPORTED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+
+function CropImageFilePreview({ file, index, onRemove }) {
+  const imageRef = useRef(null);
+
+  useEffect(() => {
+    if (!imageRef.current) return undefined;
+    const objectUrl = URL.createObjectURL(file);
+    imageRef.current.src = objectUrl;
+    return () => URL.revokeObjectURL(objectUrl);
+  }, [file]);
+
+  return (
+    <div className="crop-image-preview">
+      <img ref={imageRef} alt={`Selected crop photo ${index + 1}`} />
+      <span title={file.name}>{file.name}</span>
+      <button
+        type="button"
+        aria-label={`Remove ${file.name}`}
+        onClick={onRemove}
+      >
+        Remove
+      </button>
+    </div>
+  );
+}
 
 function AddCrop() {
   const formId = useId();
@@ -20,14 +52,29 @@ function AddCrop() {
   const { user } = useAuth();
   const [saved, setSaved] = useState(false);
   const [submitError, setSubmitError] = useState("");
+  const [imageError, setImageError] = useState("");
+  const [selectedImages, setSelectedImages] = useState([]);
+  const [createdCrop, setCreatedCrop] = useState(null);
   const createCropMutation = useCreateCropMutation();
   const updateCropMutation = useUpdateCropMutation();
+  const uploadCropImagesMutation = useUploadCropImagesMutation();
   const {
     data: crops = [],
     isLoading: isLoadingCrops,
     isError: isCropListError,
   } = useFarmerCropListQuery(isEditing ? user?.id : null);
   const crop = isEditing ? crops.find((listing) => listing.id === cropId) : null;
+  const {
+    data: existingImages = [],
+    isLoading: isLoadingImages,
+    isError: isImageListError,
+  } = useCropImagesQuery(isEditing ? cropId : null, { enabled: isEditing });
+  const imageSlotsRemaining = Math.max(
+    0,
+    MAX_CROP_IMAGES - (isEditing ? existingImages.length : 0),
+  );
+  const imagePickerDisabled = isEditing
+    && (isLoadingImages || isImageListError || imageSlotsRemaining === 0);
   const {
     register,
     handleSubmit,
@@ -69,9 +116,37 @@ function AddCrop() {
     }
   }, [crop, reset]);
 
+  function handleImageSelection(event) {
+    const files = Array.from(event.target.files || []);
+    event.target.value = "";
+    setImageError("");
+
+    if (files.length > imageSlotsRemaining) {
+      setImageError(
+        `You can add up to ${imageSlotsRemaining} more image${imageSlotsRemaining === 1 ? "" : "s"} to this crop.`,
+      );
+      return;
+    }
+
+    const unsupportedFile = files.find((file) => !SUPPORTED_IMAGE_TYPES.has(file.type));
+    if (unsupportedFile) {
+      setImageError("Choose JPEG, PNG, or WebP images only.");
+      return;
+    }
+
+    const oversizedFile = files.find((file) => file.size > MAX_IMAGE_SIZE_BYTES);
+    if (oversizedFile) {
+      setImageError("Each image must be 5 MB or smaller.");
+      return;
+    }
+
+    setSelectedImages(files);
+  }
+
   async function handleCropSubmit(values) {
     setSaved(false);
     setSubmitError("");
+    let cropSavedBeforeUpload = false;
     const payload = {
       name: values.name.trim(),
       category: values.category,
@@ -87,9 +162,50 @@ function AddCrop() {
 
     try {
       if (isEditing) {
+        if (selectedImages.length > 0) {
+          await uploadCropImagesMutation.mutateAsync({
+            cropId,
+            files: selectedImages,
+          });
+          setSelectedImages([]);
+        }
         await updateCropMutation.mutateAsync({ cropId, updates: payload });
+      } else if (createdCrop) {
+        const updatedCrop = await updateCropMutation.mutateAsync({
+          cropId: createdCrop.id,
+          updates: {
+            ...payload,
+            expected_quantity: createdCrop.quantityValue,
+          },
+        });
+        const retryCrop = {
+          ...updatedCrop,
+          quantityValue: Number(updatedCrop.quantity),
+        };
+        setCreatedCrop(retryCrop);
+        cropSavedBeforeUpload = true;
+        if (selectedImages.length > 0) {
+          await uploadCropImagesMutation.mutateAsync({
+            cropId: retryCrop.id,
+            files: selectedImages,
+          });
+          setSelectedImages([]);
+        }
       } else {
-        await createCropMutation.mutateAsync(payload);
+        const created = await createCropMutation.mutateAsync(payload);
+        const newCrop = {
+          ...created,
+          quantityValue: Number(created.quantity),
+        };
+        setCreatedCrop(newCrop);
+        cropSavedBeforeUpload = true;
+        if (selectedImages.length > 0) {
+          await uploadCropImagesMutation.mutateAsync({
+            cropId: newCrop.id,
+            files: selectedImages,
+          });
+          setSelectedImages([]);
+        }
       }
       setSaved(true);
       navigate("/farmer/crops", {
@@ -100,8 +216,14 @@ function AddCrop() {
         },
       });
     } catch (error) {
+      const message = getApiErrorMessage(
+        error,
+        "Unable to publish this crop. Please try again.",
+      );
       setSubmitError(
-        getApiErrorMessage(error, "Unable to publish this crop. Please try again."),
+        cropSavedBeforeUpload
+          ? `Your crop listing was saved, but its images were not. ${message} Submit again to retry without creating another crop.`
+          : message,
       );
     }
   }
@@ -379,6 +501,68 @@ function AddCrop() {
               )}
             </label>
           </section>
+          <section className="farmer-panel form-panel crop-image-panel">
+            <div className="form-panel__heading">
+              <span>03</span>
+              <div>
+                <h3>Crop photos</h3>
+                <p>Upload up to 5 JPEG, PNG, or WebP images, 5 MB each.</p>
+              </div>
+            </div>
+            {isEditing && isLoadingImages && (
+              <p className="crop-image-message" role="status">
+                Loading current crop images…
+              </p>
+            )}
+            {isEditing && isImageListError && (
+              <p className="form-error" role="alert">
+                Unable to load current images. You can still update crop details,
+                but image uploads are disabled until the list is available.
+              </p>
+            )}
+            {isEditing && !isLoadingImages && !isImageListError && (
+              <CropImageGallery
+                cropId={cropId}
+                alt={`${crop.name} uploaded photo`}
+                variant="gallery"
+                eager
+              />
+            )}
+            <label className="crop-image-picker">
+              <span>
+                {imageSlotsRemaining > 0
+                  ? `Choose images (${imageSlotsRemaining} slot${imageSlotsRemaining === 1 ? "" : "s"} remaining)`
+                  : "This crop already has the maximum of 5 images"}
+              </span>
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                multiple
+                disabled={imagePickerDisabled}
+                onChange={handleImageSelection}
+              />
+            </label>
+            {selectedImages.length > 0 && (
+              <div className="crop-image-previews">
+                {selectedImages.map((file, index) => (
+                  <CropImageFilePreview
+                    file={file}
+                    index={index}
+                    key={`${file.name}-${index}`}
+                    onRemove={() => setSelectedImages((current) => (
+                      current.filter((_, fileIndex) => fileIndex !== index)
+                    ))}
+                  />
+                ))}
+              </div>
+            )}
+            {imageError && <p className="form-error" role="alert">{imageError}</p>}
+            {!isEditing && createdCrop && (
+              <p className="crop-image-message" role="status">
+                Crop saved. You can retry uploading its selected images here.
+              </p>
+            )}
+          </section>
         </div>
         <aside className="crop-form__aside">
           <div className="form-tip">
@@ -403,14 +587,18 @@ function AddCrop() {
               disabled={
                 isSubmitting ||
                 createCropMutation.isPending ||
-                updateCropMutation.isPending
+                updateCropMutation.isPending ||
+                uploadCropImagesMutation.isPending
               }
             >
               {isSubmitting ||
               createCropMutation.isPending ||
-              updateCropMutation.isPending
+              updateCropMutation.isPending ||
+              uploadCropImagesMutation.isPending
                 ? isEditing
-                  ? "Saving changes..."
+                  ? uploadCropImagesMutation.isPending
+                    ? "Uploading images..."
+                    : "Saving changes..."
                   : "Publishing listing..."
                 : isEditing
                   ? "Save changes"

@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../services/api";
+import { useAuth } from "../context/AuthContext";
 
 export const cropKeys = {
   all: ["crops"],
@@ -7,6 +8,18 @@ export const cropKeys = {
   detail: (cropId) => ["crops", "detail", cropId],
   farmerList: (farmerId) => ["crops", "farmer", farmerId],
   farmerDashboard: (farmerId) => ["dashboard", "farmer", farmerId],
+};
+
+export const cropImageKeys = {
+  forCrop: (cropId) => ["crop-images", cropId],
+  list: (cropId, userId) => ["crop-images", cropId, userId, "metadata"],
+  content: (cropId, imageId, userId) => [
+    "crop-images",
+    cropId,
+    userId,
+    "content",
+    imageId,
+  ],
 };
 
 const numberFormatter = new Intl.NumberFormat("en-IN", {
@@ -151,6 +164,39 @@ export function useCropDetailQuery(cropId) {
   });
 }
 
+export function useCropImagesQuery(cropId, { enabled = true } = {}) {
+  const { user, loading } = useAuth();
+
+  return useQuery({
+    queryKey: cropImageKeys.list(cropId, user?.id || null),
+    queryFn: async () => {
+      const response = await api.get(
+        `/crops/${encodeURIComponent(cropId)}/images`,
+      );
+      return response.data.images || [];
+    },
+    enabled: Boolean(cropId) && enabled && !loading,
+    staleTime: 1000 * 60,
+  });
+}
+
+export function useCropImageContentQuery(cropId, imageId, enabled = true) {
+  const { user, loading } = useAuth();
+
+  return useQuery({
+    queryKey: cropImageKeys.content(cropId, imageId, user?.id || null),
+    queryFn: async () => {
+      const response = await api.get(
+        `/crops/${encodeURIComponent(cropId)}/images/${encodeURIComponent(imageId)}`,
+        { responseType: "blob" },
+      );
+      return response.data;
+    },
+    enabled: Boolean(cropId && imageId) && enabled && !loading,
+    staleTime: 1000 * 60 * 5,
+  });
+}
+
 export function useFarmerCropListQuery(farmerId) {
   return useQuery({
     queryKey: cropKeys.farmerList(farmerId),
@@ -235,6 +281,25 @@ export function useCreateCropMutation() {
       queryClient.invalidateQueries({ queryKey: cropKeys.all }),
       queryClient.invalidateQueries({ queryKey: ["dashboard", "farmer"] }),
     ]),
+  });
+}
+
+export function useUploadCropImagesMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ cropId, files }) => {
+      const formData = new FormData();
+      files.forEach((file) => formData.append("images", file));
+      await api.post(
+        `/crops/${encodeURIComponent(cropId)}/images`,
+        formData,
+        { headers: { "Content-Type": "multipart/form-data" } },
+      );
+    },
+    onSuccess: (_, variables) => queryClient.invalidateQueries({
+      queryKey: cropImageKeys.forCrop(variables.cropId),
+    }),
   });
 }
 
