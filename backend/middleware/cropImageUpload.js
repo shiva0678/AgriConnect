@@ -18,6 +18,13 @@ export function requireFarmerForImageUpload(request, response, next) {
   next();
 }
 
+export function requireFarmerForImageDeletion(request, response, next) {
+  if (request.user?.role !== 'farmer') {
+    return next(new AppError(403, 'Only farmers can delete crop images.'));
+  }
+  next();
+}
+
 export function validateCropImageId(request, response, next) {
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(request.params.cropId)) {
     return next(new AppError(400, 'Invalid crop ID.'));

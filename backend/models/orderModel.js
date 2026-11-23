@@ -138,6 +138,15 @@ export async function updateFarmerOrderStatus({ orderId, farmerId, status }) {
       [orderId, farmerId, status]
     );
 
+    if (existingOrder.status === 'pending' && status === 'confirmed') {
+      await client.query(
+        `INSERT INTO conversations (order_id)
+         VALUES ($1)
+         ON CONFLICT (order_id) DO NOTHING`,
+        [orderId]
+      );
+    }
+
     const updatedResult = await client.query(
       `SELECT
          o.id,

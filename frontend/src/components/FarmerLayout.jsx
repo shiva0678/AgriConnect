@@ -9,12 +9,14 @@ import {
 } from "react-router-dom";
 import { BrandMark } from "./SiteChrome";
 import { useAuth } from "../context/AuthContext";
+import { useChatUnreadCount } from "../hooks/useChatUnreadCount";
 import { useMotionDrawer } from "../hooks/useMotionDrawer";
 
 const navigation = [
   { to: "/farmer/dashboard", label: "Overview", icon: "⌂" },
   { to: "/farmer/crops", label: "My crops", icon: "◫" },
   { to: "/farmer/orders", label: "Orders", icon: "◌", badge: "6" },
+  { to: "/farmer/chat", label: "Messages", icon: "✉", unreadMessages: true },
   { to: "/farmer/price-history", label: "Price history", icon: "◷" },
   { to: "/farmer/price-analytics", label: "Price analytics", icon: "⌁" },
   { to: "/farmer/price-assistant", label: "Price assistant", icon: "✳" },
@@ -26,6 +28,11 @@ function FarmerLayout() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const unreadCountQuery = useChatUnreadCount(user?.id);
+  const unreadCount = Math.max(
+    0,
+    Number(unreadCountQuery.data?.unread_count) || 0,
+  );
   const workspaceName = user?.name || "Farmer account";
   const workspaceEmail = user?.email || "Verified farmer";
   const { isMobile, panelRef, triggerRef } = useMotionDrawer(
@@ -35,9 +42,11 @@ function FarmerLayout() {
   const current = navigation.find((item) =>
     location.pathname.startsWith(item.to),
   );
-  const pageTitle = location.pathname.endsWith("/add-crop")
-    ? "Add a crop"
-    : current?.label || "Overview";
+  const pageTitle = location.pathname.includes("/chat")
+    ? "Messages"
+    : location.pathname.endsWith("/add-crop")
+      ? "Add a crop"
+      : current?.label || "Overview";
 
   function handleLogout() {
     logout();
@@ -81,6 +90,15 @@ function FarmerLayout() {
               <span className="farmer-nav__icon">{item.icon}</span>
               <span>{item.label}</span>
               {item.badge && <b>{item.badge}</b>}
+              {item.unreadMessages && unreadCount > 0 && (
+                <b
+                  role="status"
+                  aria-label={`${unreadCount} unread messages`}
+                  aria-live="polite"
+                >
+                  {unreadCount > 99 ? "99+" : unreadCount}
+                </b>
+              )}
             </NavLink>
           ))}
         </nav>

@@ -100,6 +100,57 @@ export async function initializeDatabase() {
   `);
 
   await pool.query(`
+    CREATE TABLE IF NOT EXISTS conversations (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      order_id UUID NOT NULL UNIQUE REFERENCES orders(id) ON DELETE RESTRICT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS conversations_updated_at_idx
+      ON conversations (updated_at DESC);
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS messages (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      conversation_id UUID NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+      sender_id UUID NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+      content TEXT NOT NULL,
+      client_message_id UUID NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      CONSTRAINT messages_content_not_blank CHECK (content ~ '[^[:space:]]'),
+      CONSTRAINT messages_content_max_length CHECK (CHAR_LENGTH(content) <= 2000),
+      UNIQUE (conversation_id, sender_id, client_message_id)
+    )
+  `);
+
+  await pool.query(`
+    ALTER TABLE messages
+      DROP CONSTRAINT IF EXISTS messages_content_not_blank;
+    ALTER TABLE messages
+      ADD CONSTRAINT messages_content_not_blank
+      CHECK (content ~ '[^[:space:]]');
+  `);
+
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS messages_conversation_created_at_idx
+      ON messages (conversation_id, created_at DESC, id DESC);
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS conversation_read_states (
+      conversation_id UUID NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+      user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      last_read_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      PRIMARY KEY (conversation_id, user_id)
+    )
+  `);
+
+  await pool.query(`
     CREATE TABLE IF NOT EXISTS price_history (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       commodity TEXT NOT NULL CHECK (BTRIM(commodity) <> ''),

@@ -2,6 +2,7 @@ import { Suspense, lazy, useEffect } from "react";
 import { BrowserRouter, Route, Routes, useLocation } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
+import { ChatSocketProvider } from "./hooks/useChatSocket";
 import { PublicFooter, PublicHeader } from "./components/SiteChrome";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
@@ -31,6 +32,7 @@ const LazyPriceAssistant = lazy(
 );
 const LazyPriceHistory = lazy(() => import("./pages/shared/PriceHistory"));
 const LazyPriceAnalytics = lazy(() => import("./pages/shared/PriceAnalytics"));
+const LazyChatPage = lazy(() => import("./pages/shared/ChatPage"));
 
 function RouteFallback() {
   return <div className="page-loading">Loading workspace…</div>;
@@ -82,7 +84,9 @@ function AppRoutes() {
             path="/farmer"
             element={
               <ProtectedRoute allowedRoles={["farmer"]}>
-                <LazyFarmerLayout />
+                <ChatSocketProvider>
+                  <LazyFarmerLayout />
+                </ChatSocketProvider>
               </ProtectedRoute>
             }
           >
@@ -92,6 +96,8 @@ function AppRoutes() {
             <Route path="add-crop" element={<LazyAddCrop />} />
             <Route path="crops/:cropId/edit" element={<LazyAddCrop />} />
             <Route path="orders" element={<LazyFarmerOrders />} />
+            <Route path="chat" element={<LazyChatPage />} />
+            <Route path="chat/:conversationId" element={<LazyChatPage />} />
             <Route path="price-history" element={<LazyPriceHistory />} />
             <Route path="price-analytics" element={<LazyPriceAnalytics />} />
             <Route path="price-assistant" element={<LazyPriceAssistant />} />
@@ -101,7 +107,9 @@ function AppRoutes() {
             path="/buyer"
             element={
               <ProtectedRoute allowedRoles={["buyer"]}>
-                <LazyBuyerLayout />
+                <ChatSocketProvider>
+                  <LazyBuyerLayout />
+                </ChatSocketProvider>
               </ProtectedRoute>
             }
           >
@@ -110,6 +118,8 @@ function AppRoutes() {
             <Route path="marketplace" element={<LazyBuyerMarketplace />} />
             <Route path="crop/:id" element={<LazyBuyerCropDetails />} />
             <Route path="orders" element={<LazyBuyerOrders />} />
+            <Route path="chat" element={<LazyChatPage />} />
+            <Route path="chat/:conversationId" element={<LazyChatPage />} />
             <Route path="price-history" element={<LazyPriceHistory />} />
             <Route path="price-analytics" element={<LazyPriceAnalytics />} />
             <Route path="price-assistant" element={<LazyPriceAssistant />} />

@@ -12,6 +12,7 @@ import {
   updateCropHandler,
 } from '../controllers/cropController.js';
 import {
+  deleteCropImageController,
   getCropImageController,
   getCropImagesController,
   uploadCropImagesController,
@@ -19,6 +20,7 @@ import {
 import {
   limitConcurrentCropImageUploads,
   parseCropImageMultipart,
+  requireFarmerForImageDeletion,
   requireFarmerForImageUpload,
   validateCropImageId,
   validateCropImageParams,
@@ -195,6 +197,53 @@ router.get(
   optionalAuthenticateToken,
   validateCropImageParams,
   getCropImageController,
+);
+
+/**
+ * @openapi
+ * /api/crops/{cropId}/images/{imageId}:
+ *   delete:
+ *     summary: Delete an image from a crop owned by the authenticated farmer
+ *     description: Removes the PostgreSQL image reference and then deletes the referenced GridFS file. If GridFS cleanup fails after the reference is removed, returns 202 and marks cleanup as pending.
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: cropId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *       - in: path
+ *         name: imageId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: Image reference and GridFS file deleted
+ *       202:
+ *         description: Image reference deleted; GridFS cleanup requires reconciliation
+ *       400:
+ *         description: Invalid crop or image ID
+ *       401:
+ *         description: Authentication required
+ *       403:
+ *         description: Farmer role required
+ *       404:
+ *         description: Image not found or not owned by the authenticated farmer
+ *       500:
+ *         description: PostgreSQL deletion failed
+ *       503:
+ *         description: Image storage unavailable
+ */
+router.delete(
+  '/crops/:cropId/images/:imageId',
+  authenticateToken,
+  requireFarmerForImageDeletion,
+  validateCropImageParams,
+  deleteCropImageController,
 );
 
 /**

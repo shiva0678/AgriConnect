@@ -1,6 +1,7 @@
 import cors from "cors";
 import dotenv from "dotenv";
 import express from "express";
+import { createServer } from "node:http";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import swaggerUi from "swagger-ui-express";
@@ -10,6 +11,7 @@ import authRoutes from "./routes/authRoutes.js";
 import healthRoutes from "./routes/healthRoutes.js";
 import cropRoutes from "./routes/cropRoutes.js";
 import orderRoutes from "./routes/orderRoutes.js";
+import chatRoutes from "./routes/chatRoutes.js";
 import priceHistoryRoutes from "./routes/priceHistoryRoutes.js";
 import priceAnalyticsRoutes from "./routes/priceAnalyticsRoutes.js";
 import demandOutlookRoutes from "./routes/demandOutlookRoutes.js";
@@ -19,11 +21,14 @@ import wastageAlertRoutes from "./routes/wastageAlertRoutes.js";
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler.js";
 import { swaggerSpec } from "./swagger.js";
 import { startServerLifecycle } from "./utils/serverStartup.js";
+import { createChatSocketServer } from "./sockets/chatSocket.js";
 
 dotenv.config();
 
 const app = express();
 const port = process.env.PORT || 5000;
+const httpServer = createServer(app);
+const io = createChatSocketServer(httpServer);
 
 app.use(cors());
 app.use(express.json());
@@ -38,6 +43,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/health", healthRoutes);
 app.use("/api", cropRoutes);
 app.use("/api", orderRoutes);
+app.use("/api", chatRoutes);
 app.use("/api", priceHistoryRoutes);
 app.use("/api", priceAnalyticsRoutes);
 app.use("/api", demandOutlookRoutes);
@@ -51,7 +57,7 @@ app.use(errorHandler);
 export async function startServer({
   initializePostgres = initializeDatabase,
   initializeMongo = initializeMongoDB,
-  listen = () => app.listen(port, () => {
+  listen = () => httpServer.listen(port, () => {
     console.log(`AgriConnect API listening on port ${port}`);
   }),
   logger = console,
@@ -70,14 +76,14 @@ export async function startServer({
   }
 }
 
-async function shutdown(server, signal) {
+async function shutdown(signal) {
   console.log(`${signal} received; shutting down AgriConnect API`);
   try {
     await new Promise((resolve, reject) => {
-      server.close((error) => (error ? reject(error) : resolve()));
+      io.close((error) => (error ? reject(error) : resolve()));
     });
   } catch (error) {
-    console.error("HTTP server shutdown failed:", error.message);
+    console.error("Socket and HTTP server shutdown failed:", error.message);
     process.exitCode = 1;
   }
 
@@ -102,8 +108,8 @@ const isMainModule = process.argv[1]
 if (isMainModule) {
   const server = await startServer();
   if (server) {
-    process.once("SIGINT", () => shutdown(server, "SIGINT"));
-    process.once("SIGTERM", () => shutdown(server, "SIGTERM"));
+    process.once("SIGINT", () => shutdown("SIGINT"));
+    process.once("SIGTERM", () => shutdown("SIGTERM"));
   }
 } else {
   await initializeDatabase();

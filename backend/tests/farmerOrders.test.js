@@ -12,6 +12,12 @@ async function withTestContext(run) {
     await run(context);
   } finally {
     if (context.orderIds.length) {
+      await pool.query(
+        'DELETE FROM conversations WHERE order_id = ANY($1::uuid[])',
+        [context.orderIds],
+      );
+    }
+    if (context.orderIds.length) {
       await pool.query('DELETE FROM orders WHERE id = ANY($1::uuid[])', [context.orderIds]);
     }
     if (context.cropIds.length) {
@@ -359,5 +365,156 @@ test('PATCH /api/orders/:id/status rejects invalid transitions and terminal orde
       const persisted = await pool.query('SELECT status FROM orders WHERE id = $1', [order.id]);
       assert.equal(persisted.rows[0].status, initialStatus);
     }
+  });
+});
+
+test('order confirmation creates exactly one conversation and later transitions do not create duplicates', async () => {
+  await withTestContext(async (context) => {
+    const farmer = await createAccount(context, 'farmer');
+    const otherFarmer = await createAccount(context, 'farmer');
+    const buyer = await createAccount(context, 'buyer');
+    const cropId = await createCrop(context, farmer.id);
+    const order = await createOrder(context, {
+      buyerId: buyer.id,
+      farmerId: farmer.id,
+      cropId,
+    });
+
+    const forbidden = await request(app)
+      .patch(`/api/orders/${order.id}/status`)
+      .set('Authorization', `Bearer ${otherFarmer.token}`)
+      .send({ status: 'confirmed' });
+    assert.equal(forbidden.status, 404);
+    assert.equal(
+      Number((await pool.query(
+        'SELECT COUNT(*)::int AS total FROM conversations WHERE order_id = $1',
+        [order.id],
+      )).rows[0].total),
+      0,
+    );
+
+    const invalid = await request(app)
+      .patch(`/api/orders/${order.id}/status`)
+      .set('Authorization', `Bearer ${farmer.token}`)
+      .send({ status: 'shipped' });
+    assert.equal(invalid.status, 400);
+
+    const confirmed = await request(app)
+      .patch(`/api/orders/${order.id}/status`)
+      .set('Authorization', `Bearer ${farmer.token}`)
+      .send({ status: 'confirmed' });
+    assert.equal(confirmed.status, 200);
+
+    const conversations = await pool.query(
+      'SELECT id, order_id FROM conversations WHERE order_id = $1',
+      [order.id],
+    );
+    assert.equal(conversations.rowCount, 1);
+    assert.equal(conversations.rows[0].order_id, order.id);
+
+    const repeatedConfirmation = await request(app)
+      .patch(`/api/orders/${order.id}/status`)
+      .set('Authorization', `Bearer ${farmer.token}`)
+      .send({ status: 'confirmed' });
+    assert.equal(repeatedConfirmation.status, 400);
+
+    for (const status of ['shipped', 'delivered']) {
+      const response = await request(app)
+        .patch(`/api/orders/${order.id}/status`)
+        .set('Authorization', `Bearer ${farmer.token}`)
+        .send({ status });
+      assert.equal(response.status, 200);
+    }
+
+    const conversationCount = await pool.query(
+      'SELECT COUNT(*)::int AS total FROM conversations WHERE order_id = $1',
+      [order.id],
+    );
+    assert.equal(conversationCount.rows[0].total, 1);
+
+    const cancelledOrder = await createOrder(context, {
+      buyerId: buyer.id,
+      farmerId: farmer.id,
+      cropId,
+      status: 'pending',
+    });
+    const cancelled = await request(app)
+      .patch(`/api/orders/${cancelledOrder.id}/status`)
+      .set('Authorization', `Bearer ${farmer.token}`)
+      .send({ status: 'cancelled' });
+    assert.equal(cancelled.status, 200);
+
+    const cancelledConversationCount = await pool.query(
+      'SELECT COUNT(*)::int AS total FROM conversations WHERE order_id = $1',
+      [cancelledOrder.id],
+    );
+    assert.equal(cancelledConversationCount.rows[0].total, 0);
+  });
+});
+
+test('conversation insertion failure rolls back confirmation and order update failure creates no conversation', async () => {
+  await withTestContext(async (context) => {
+    const farmer = await createAccount(context, 'farmer');
+    const buyer = await createAccount(context, 'buyer');
+    const cropId = await createCrop(context, farmer.id);
+    const order = await createOrder(context, {
+      buyerId: buyer.id,
+      farmerId: farmer.id,
+      cropId,
+    });
+
+    await pool.query(`
+      CREATE OR REPLACE FUNCTION chat_test_fail_conversation_insert()
+      RETURNS trigger AS $$
+      BEGIN
+        RAISE EXCEPTION 'forced conversation insertion failure';
+      END;
+      $$ LANGUAGE plpgsql
+    `);
+    await pool.query(`
+      CREATE TRIGGER chat_test_fail_conversation_insert_trigger
+      BEFORE INSERT ON conversations
+      FOR EACH ROW
+      EXECUTE FUNCTION chat_test_fail_conversation_insert()
+    `);
+
+    try {
+      const failedConfirmation = await request(app)
+        .patch(`/api/orders/${order.id}/status`)
+        .set('Authorization', `Bearer ${farmer.token}`)
+        .send({ status: 'confirmed' });
+      assert.equal(failedConfirmation.status, 500);
+    } finally {
+      await pool.query(
+        'DROP TRIGGER IF EXISTS chat_test_fail_conversation_insert_trigger ON conversations',
+      );
+      await pool.query(
+        'DROP FUNCTION IF EXISTS chat_test_fail_conversation_insert()',
+      );
+    }
+
+    const rolledBackOrder = await pool.query(
+      'SELECT status FROM orders WHERE id = $1',
+      [order.id],
+    );
+    assert.equal(rolledBackOrder.rows[0].status, 'pending');
+
+    const conversationCount = await pool.query(
+      'SELECT COUNT(*)::int AS total FROM conversations WHERE order_id = $1',
+      [order.id],
+    );
+    assert.equal(conversationCount.rows[0].total, 0);
+
+    const invalidTransition = await request(app)
+      .patch(`/api/orders/${order.id}/status`)
+      .set('Authorization', `Bearer ${farmer.token}`)
+      .send({ status: 'shipped' });
+    assert.equal(invalidTransition.status, 400);
+
+    const invalidTransitionConversationCount = await pool.query(
+      'SELECT COUNT(*)::int AS total FROM conversations WHERE order_id = $1',
+      [order.id],
+    );
+    assert.equal(invalidTransitionConversationCount.rows[0].total, 0);
   });
 });

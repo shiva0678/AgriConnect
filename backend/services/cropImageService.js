@@ -13,6 +13,10 @@ import {
   MAX_CROP_IMAGES,
   MAX_IMAGE_SIZE_BYTES,
 } from '../middleware/cropImageUpload.js';
+import {
+  deleteOwnedCropImageReference,
+  findOwnedCropImageForDeletion,
+} from '../models/cropImageModel.js';
 import { AppError } from '../utils/AppError.js';
 
 const FORMATS = {
@@ -116,6 +120,101 @@ async function removeGridFSFile(bucket, fileId, cropId, logger) {
     });
   }
 }
+
+export function createCropImageDeletionService({
+  databasePool = pool,
+  findImage = findOwnedCropImageForDeletion,
+  deleteImageReference = deleteOwnedCropImageReference,
+  initializeMongo = initializeMongoDB,
+  getBucket = getGridFSBucket,
+  logger = console,
+} = {}) {
+  return async function deleteCropImage({ cropId, imageId, farmerId }) {
+    let image;
+    try {
+      image = await findImage(cropId, imageId, farmerId, databasePool);
+    } catch {
+      logger.error('PostgreSQL crop image lookup failed during deletion.');
+      throw new AppError(500, 'Unable to delete crop image.');
+    }
+
+    if (!image) {
+      throw new AppError(404, 'Image not found.');
+    }
+
+    let fileId;
+    try {
+      fileId = new ObjectId(image.gridfs_file_id.trim());
+    } catch {
+      logger.error('Invalid stored GridFS reference during crop image deletion.');
+      throw new AppError(500, 'Unable to delete crop image.');
+    }
+
+    let bucket;
+    try {
+      await initializeMongo();
+      bucket = getBucket();
+    } catch {
+      logger.warn('MongoDB unavailable during crop image deletion.');
+      throw new AppError(503, 'Image storage is unavailable. Please try again later.');
+    }
+
+    let gridfsFile;
+    try {
+      gridfsFile = await bucket.find({ _id: fileId }).limit(1).next();
+    } catch {
+      logger.warn('MongoDB image lookup failed during crop image deletion.');
+      throw new AppError(503, 'Image storage is unavailable. Please try again later.');
+    }
+
+    let deletedReference;
+    try {
+      deletedReference = await deleteImageReference(
+        cropId,
+        imageId,
+        farmerId,
+        databasePool,
+      );
+    } catch {
+      logger.error('PostgreSQL crop image reference deletion failed.');
+      throw new AppError(500, 'Unable to delete crop image.');
+    }
+
+    if (!deletedReference) {
+      throw new AppError(404, 'Image not found.');
+    }
+
+    if (!gridfsFile) {
+      return { cleanupPending: false };
+    }
+
+    try {
+      await bucket.delete(fileId);
+      return { cleanupPending: false };
+    } catch {
+      let remainingFile;
+      try {
+        remainingFile = await bucket.find({ _id: fileId }).limit(1).next();
+      } catch {
+        logger.error(
+          'GridFS cleanup failed after reference deletion; an orphan may need reconciliation.',
+        );
+        return { cleanupPending: true };
+      }
+
+      if (!remainingFile) {
+        return { cleanupPending: false };
+      }
+
+      logger.error(
+        'GridFS cleanup failed after reference deletion; an orphan may need reconciliation.',
+      );
+      return { cleanupPending: true };
+    }
+  };
+}
+
+export const deleteCropImage = createCropImageDeletionService();
 
 export function createCropImageService({
   databasePool = pool,

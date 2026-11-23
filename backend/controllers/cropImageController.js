@@ -5,7 +5,10 @@ import {
   findCropImageForCrop,
   findCropImagesForCrop,
 } from '../models/cropImageModel.js';
-import { uploadCropImages } from '../services/cropImageService.js';
+import {
+  deleteCropImage,
+  uploadCropImages,
+} from '../services/cropImageService.js';
 
 function mayViewCropImages(crop, user) {
   return crop.crop_status === 'available' ||
@@ -163,3 +166,31 @@ export async function uploadCropImagesController(request, response, next) {
     next(error instanceof AppError ? error : new AppError(500, 'Unable to upload crop images.'));
   }
 }
+
+export function createCropImageDeletionHandler({
+  deleteImage = deleteCropImage,
+} = {}) {
+  return async function deleteCropImageController(request, response, next) {
+    try {
+      const result = await deleteImage({
+        cropId: request.params.cropId,
+        imageId: request.params.imageId,
+        farmerId: request.user.id,
+      });
+
+      response.status(result.cleanupPending ? 202 : 200).json({
+        success: true,
+        message: result.cleanupPending
+          ? 'Image reference removed; storage cleanup is pending.'
+          : 'Crop image deleted successfully.',
+        cleanupPending: result.cleanupPending,
+      });
+    } catch (error) {
+      next(error instanceof AppError
+        ? error
+        : new AppError(500, 'Unable to delete crop image.'));
+    }
+  };
+}
+
+export const deleteCropImageController = createCropImageDeletionHandler();

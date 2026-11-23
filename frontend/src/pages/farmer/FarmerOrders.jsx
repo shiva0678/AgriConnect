@@ -1,11 +1,13 @@
 import { m } from "framer-motion";
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import {
   useFarmerOrdersQuery,
   useUpdateFarmerOrderStatusMutation,
 } from "../../queries/orders";
 import { getApiErrorMessage } from "../../utils/apiErrorMessage";
+import { isOrderChatAvailable } from "../../utils/orderChat";
 
 const statuses = ["All orders", "Pending", "Confirmed", "Shipped", "Delivered"];
 
@@ -166,32 +168,48 @@ function FarmerOrders() {
                 Delivered
               </span>
             </div>
-            {order.status === "Pending" && (
-              <button
-                className="farmer-button farmer-button--outline"
-                disabled={updateStatusMutation.isPending}
-                onClick={() => updateStatus(order.id, "confirmed")}
-              >
-                Confirm order
-              </button>
-            )}
-            {order.status === "Confirmed" && (
-              <button
-                className="farmer-button farmer-button--outline"
-                disabled={updateStatusMutation.isPending}
-                onClick={() => updateStatus(order.id, "shipped")}
-              >
-                Mark shipped
-              </button>
-            )}
-            {order.status === "Shipped" && (
-              <button
-                className="farmer-button farmer-button--outline"
-                disabled={updateStatusMutation.isPending}
-                onClick={() => updateStatus(order.id, "delivered")}
-              >
-                Mark delivered
-              </button>
+            {(order.status === "Pending"
+              || order.status === "Confirmed"
+              || order.status === "Shipped"
+              || isOrderChatAvailable(order.status)) && (
+              <div className="order-card__actions">
+                {order.status === "Pending" && (
+                  <button
+                    className="farmer-button farmer-button--outline"
+                    disabled={updateStatusMutation.isPending}
+                    onClick={() => updateStatus(order.id, "confirmed")}
+                  >
+                    Confirm order
+                  </button>
+                )}
+                {order.status === "Confirmed" && (
+                  <button
+                    className="farmer-button farmer-button--outline"
+                    disabled={updateStatusMutation.isPending}
+                    onClick={() => updateStatus(order.id, "shipped")}
+                  >
+                    Mark shipped
+                  </button>
+                )}
+                {order.status === "Shipped" && (
+                  <button
+                    className="farmer-button farmer-button--outline"
+                    disabled={updateStatusMutation.isPending}
+                    onClick={() => updateStatus(order.id, "delivered")}
+                  >
+                    Mark delivered
+                  </button>
+                )}
+                {isOrderChatAvailable(order.status) && (
+                  <Link
+                    className="farmer-button farmer-button--outline"
+                    to={`/farmer/chat?orderId=${encodeURIComponent(order.id)}`}
+                  >
+                    Chat with Buyer
+                    <span aria-hidden="true">↗</span>
+                  </Link>
+                )}
+              </div>
             )}
           </m.article>
         ))}

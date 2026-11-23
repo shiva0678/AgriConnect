@@ -42,3 +42,39 @@ export async function findCropImageForCrop(cropId, imageId) {
   );
   return result.rows[0] || null;
 }
+
+export async function findOwnedCropImageForDeletion(
+  cropId,
+  imageId,
+  farmerId,
+  database = pool,
+) {
+  const result = await database.query(
+    `SELECT ci.id AS image_id, ci.gridfs_file_id
+     FROM crop_images ci
+     JOIN crops c ON c.id = ci.crop_id
+     WHERE c.id = $1 AND ci.id = $2 AND c.farmer_id = $3
+     LIMIT 1`,
+    [cropId, imageId, farmerId],
+  );
+  return result.rows[0] || null;
+}
+
+export async function deleteOwnedCropImageReference(
+  cropId,
+  imageId,
+  farmerId,
+  database = pool,
+) {
+  const result = await database.query(
+    `DELETE FROM crop_images ci
+     USING crops c
+     WHERE c.id = $1
+       AND ci.id = $2
+       AND c.farmer_id = $3
+       AND ci.crop_id = c.id
+     RETURNING ci.id`,
+    [cropId, imageId, farmerId],
+  );
+  return result.rows[0] || null;
+}

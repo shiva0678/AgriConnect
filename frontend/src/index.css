@@ -1453,6 +1453,13 @@ body {
 .crop-image-preview button { justify-self:start; padding:0; border:0; color:#8d554a; background:transparent; font-size:9px; text-decoration:underline; cursor:pointer; }
 .crop-image-panel .form-error { margin-top:12px; }
 
+.order-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+  margin-top: 15px;
+}
+
 @media (max-width:700px) {
   .crop-images-gallery--detail { grid-template-columns:repeat(auto-fit,minmax(90px,1fr)); }
   .crop-image-panel { padding:22px 18px; }

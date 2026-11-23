@@ -1,7 +1,9 @@
 import { m } from "framer-motion";
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { useBuyerOrdersQuery } from "../../queries/orders";
+import { isOrderChatAvailable } from "../../utils/orderChat";
 
 function BuyerOrders() {
   const { user } = useAuth();
@@ -149,6 +151,17 @@ function BuyerOrders() {
                 Delivered
               </span>
             </div>
+            {isOrderChatAvailable(order.status) && (
+              <div className="order-card__actions">
+                <Link
+                  className="farmer-button farmer-button--outline"
+                  to={`/buyer/chat?orderId=${encodeURIComponent(order.id)}`}
+                >
+                  Chat with Farmer
+                  <span aria-hidden="true">↗</span>
+                </Link>
+              </div>
+            )}
           </m.article>
         ))}
       </m.div>
