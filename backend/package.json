@@ -6,8 +6,11 @@
   "scripts": {
     "dev": "nodemon server.js",
     "start": "node server.js",
-    "test": "node --test --test-concurrency=1",
-    "import:prices": "node scripts/importPriceHistory.js"
+    "test": "node scripts/runTests.js",
+    "import:prices": "node scripts/importPriceHistory.js",
+    "provision:admins": "node scripts/provisionAdmins.js",
+    "recover:admin-password": "node scripts/recoverAdminPassword.js",
+    "provision:admin-account": "node scripts/provisionSingleAdmin.js"
   },
   "keywords": [],
   "author": "",

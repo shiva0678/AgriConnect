@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import request from 'supertest';
 import app from '../server.js';
+import { pool } from '../config/db.js';
 
 function makePayload(overrides = {}) {
   const email = `user-${randomUUID()}@example.com`;
@@ -14,6 +15,23 @@ function makePayload(overrides = {}) {
     role: 'farmer',
     ...overrides,
   };
+}
+
+async function registerTestUser(testContext, payload) {
+  let createdUserId = null;
+  testContext.after(async () => {
+    if (createdUserId) {
+      await pool.query('DELETE FROM users WHERE id = $1', [createdUserId]);
+    }
+  });
+
+  const response = await request(app)
+    .post('/api/auth/register')
+    .send(payload);
+  if (response.status === 201) {
+    createdUserId = response.body.user?.id || null;
+  }
+  return response;
 }
 
 test('unknown API routes return a JSON 404 response', async () => {
@@ -34,11 +52,9 @@ test('GET /api/health remains available', async () => {
   assert.equal(response.body.message, 'AgriConnect API is running');
 });
 
-test('POST /api/auth/register creates a user with valid data', async () => {
+test('POST /api/auth/register creates a user with valid data', async (testContext) => {
   const payload = makePayload();
-  const response = await request(app)
-    .post('/api/auth/register')
-    .send(payload);
+  const response = await registerTestUser(testContext, payload);
 
   assert.equal(response.status, 201);
   assert.equal(response.body.success, true);
@@ -49,11 +65,9 @@ test('POST /api/auth/register creates a user with valid data', async () => {
   assert.equal(response.body.user.password, undefined);
 });
 
-test('POST /api/auth/register rejects duplicate email', async () => {
+test('POST /api/auth/register rejects duplicate email', async (testContext) => {
   const payload = makePayload();
-  await request(app)
-    .post('/api/auth/register')
-    .send(payload);
+  await registerTestUser(testContext, payload);
 
   const response = await request(app)
     .post('/api/auth/register')

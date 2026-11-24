@@ -10,7 +10,7 @@ import {
   useUploadCropImagesMutation,
   useUpdateCropMutation,
 } from "../../queries/crops";
-import { useAuth } from "../../context/AuthContext";
+import { useAuth } from "../../context/useAuth";
 import { getApiErrorMessage } from "../../utils/apiErrorMessage";
 import CropImageGallery from "../../components/CropImageGallery";
 import FairPriceIndicator from "./FairPriceIndicator";

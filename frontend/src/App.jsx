@@ -33,6 +33,18 @@ const LazyPriceAssistant = lazy(
 const LazyPriceHistory = lazy(() => import("./pages/shared/PriceHistory"));
 const LazyPriceAnalytics = lazy(() => import("./pages/shared/PriceAnalytics"));
 const LazyChatPage = lazy(() => import("./pages/shared/ChatPage"));
+const LazyAdminPasswordChange = lazy(
+  () => import("./pages/admin/AdminPasswordChange"),
+);
+const LazyAdminLayout = lazy(() => import("./components/AdminLayout"));
+const LazyAdminOverview = lazy(() => import("./pages/admin/AdminOverview"));
+const LazyAdminAnalytics = lazy(() => import("./pages/admin/AdminAnalytics"));
+const LazyAdminActivity = lazy(() => import("./pages/admin/AdminActivity"));
+const LazyAdminChatbot = lazy(() => import("./pages/admin/AdminChatbot"));
+const LazyAdminUsers = lazy(() => import("./pages/admin/AdminUsers"));
+const LazyAdminUserDetails = lazy(
+  () => import("./pages/admin/AdminUserDetails"),
+);
 
 function RouteFallback() {
   return <div className="page-loading">Loading workspace…</div>;
@@ -78,6 +90,29 @@ function AppRoutes() {
               <PublicLayout>
                 <Register />
               </PublicLayout>
+            }
+          />
+          <Route
+            path="/admin"
+            element={
+              <ProtectedRoute allowedRoles={["admin"]}>
+                <LazyAdminLayout />
+              </ProtectedRoute>
+            }
+          >
+            <Route index element={<LazyAdminOverview />} />
+            <Route path="analytics" element={<LazyAdminAnalytics />} />
+            <Route path="activity" element={<LazyAdminActivity />} />
+            <Route path="chat" element={<LazyAdminChatbot />} />
+            <Route path="users" element={<LazyAdminUsers />} />
+            <Route path="users/:userId" element={<LazyAdminUserDetails />} />
+          </Route>
+          <Route
+            path="/admin/change-password"
+            element={
+              <ProtectedRoute allowedRoles={["admin"]}>
+                <LazyAdminPasswordChange />
+              </ProtectedRoute>
             }
           />
           <Route

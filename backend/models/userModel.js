@@ -11,13 +11,55 @@ export async function findUserByEmail(email) {
 
 export async function findUserById(id) {
   const result = await pool.query(
-    `SELECT id, name, email, phone, role, farm_name, company_name, location, created_at
+    `SELECT id, name, email, phone, role, status, password_change_required,
+            farm_name, company_name, location, created_at
      FROM users
      WHERE id = $1
      LIMIT 1`,
     [id]
   );
 
+  return result.rows[0] || null;
+}
+
+export async function findUserForAuthentication(id) {
+  const result = await pool.query(
+    `SELECT id, name, email, phone, role, status, password_change_required,
+            password_version
+     FROM users
+     WHERE id = $1
+     LIMIT 1`,
+    [id]
+  );
+  return result.rows[0] || null;
+}
+
+export async function isAuthorizedAdminUser(userId, email) {
+  const result = await pool.query(
+    `SELECT id
+     FROM authorized_admins
+     WHERE LOWER(email) = LOWER($2)
+       AND user_id = $1
+       AND status = 'active'
+     LIMIT 1`,
+    [userId, email]
+  );
+  return Boolean(result.rows[0]);
+}
+
+export async function changeUserPassword(id, passwordHash) {
+  const result = await pool.query(
+    `UPDATE users
+     SET password = $2,
+         password_change_required = FALSE,
+         password_version = password_version + 1
+     WHERE id = $1
+       AND role = 'admin'
+       AND password_change_required = TRUE
+     RETURNING id, name, email, role, status, password_change_required,
+               password_version`,
+    [id, passwordHash]
+  );
   return result.rows[0] || null;
 }
 

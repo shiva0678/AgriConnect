@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { AuthLayout } from "./AuthLayout";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../context/useAuth";
 import { api } from "../services/api";
 import { loginSchema } from "../schemas/authSchemas";
 import { getApiErrorMessage } from "../utils/apiErrorMessage";
@@ -38,7 +38,14 @@ function Login() {
       login({ userData: user, authToken: token });
       setSubmitSuccess("Login successful. Redirecting...");
 
-      if (user.role === "farmer") {
+      if (user.role === "admin") {
+        navigate(
+          user.requiresPasswordChange
+            ? "/admin/change-password"
+            : "/admin",
+          { replace: true },
+        );
+      } else if (user.role === "farmer") {
         navigate("/farmer/dashboard", { replace: true });
       } else {
         navigate("/buyer/dashboard", { replace: true });

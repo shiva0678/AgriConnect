@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import request from 'supertest';
 import app from '../server.js';
+import { pool } from '../config/db.js';
 
 function uniqueUser(overrides = {}) {
   const email = `login-${randomUUID()}@example.com`;
@@ -16,12 +17,27 @@ function uniqueUser(overrides = {}) {
   };
 }
 
-test('POST /api/auth/login logs in with correct credentials', async () => {
-  const payload = uniqueUser();
+async function registerTestUser(testContext, payload) {
+  let createdUserId = null;
+  testContext.after(async () => {
+    if (createdUserId) {
+      await pool.query('DELETE FROM users WHERE id = $1', [createdUserId]);
+    }
+  });
 
-  await request(app)
+  const response = await request(app)
     .post('/api/auth/register')
     .send(payload);
+  if (response.status === 201) {
+    createdUserId = response.body.user?.id || null;
+  }
+  return response;
+}
+
+test('POST /api/auth/login logs in with correct credentials', async (testContext) => {
+  const payload = uniqueUser();
+
+  await registerTestUser(testContext, payload);
 
   const response = await request(app)
     .post('/api/auth/login')
@@ -38,12 +54,10 @@ test('POST /api/auth/login logs in with correct credentials', async () => {
   assert.match(response.body.token, /\S+/);
 });
 
-test('POST /api/auth/login rejects wrong password', async () => {
+test('POST /api/auth/login rejects wrong password', async (testContext) => {
   const payload = uniqueUser();
 
-  await request(app)
-    .post('/api/auth/register')
-    .send(payload);
+  await registerTestUser(testContext, payload);
 
   const response = await request(app)
     .post('/api/auth/login')
@@ -89,12 +103,10 @@ test('GET /api/auth/me rejects invalid token', async () => {
   assert.match(response.body.message, /token|unauthorized/i);
 });
 
-test('GET /api/auth/me returns the authenticated user from the database', async () => {
+test('GET /api/auth/me returns the authenticated user from the database', async (testContext) => {
   const payload = uniqueUser({ role: 'buyer' });
 
-  await request(app)
-    .post('/api/auth/register')
-    .send(payload);
+  await registerTestUser(testContext, payload);
 
   const loginResponse = await request(app)
     .post('/api/auth/login')
@@ -118,9 +130,9 @@ test('GET /api/auth/me returns the authenticated user from the database', async 
   assert.equal(response.body.user.password_hash, undefined);
 });
 
-test('PATCH /api/auth/me persists editable profile fields', async () => {
+test('PATCH /api/auth/me persists editable profile fields', async (testContext) => {
   const payload = uniqueUser({ role: 'farmer' });
-  await request(app).post('/api/auth/register').send(payload);
+  await registerTestUser(testContext, payload);
 
   const loginResponse = await request(app)
     .post('/api/auth/login')

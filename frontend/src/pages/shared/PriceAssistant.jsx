@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { useAuth } from "../../context/AuthContext";
+import { useAuth } from "../../context/useAuth";
 import { usePriceAssistantMutation } from "../../queries/priceAssistant";
 import "./PriceAssistant.css";
 

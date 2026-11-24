@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { m } from "framer-motion";
-import { useAuth } from "../../context/AuthContext";
+import { useAuth } from "../../context/useAuth";
 import { getCropImage } from "../../data/cropImagery";
 import { useMarketplaceCropsQuery } from "../../queries/crops";
 import { useBuyerOrdersQuery } from "../../queries/orders";

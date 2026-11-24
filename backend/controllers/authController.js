@@ -9,6 +9,8 @@ import {
   createUser,
   findUserByEmail,
   findUserById,
+  isAuthorizedAdminUser,
+  changeUserPassword,
   updateUserProfile,
 } from '../models/userModel.js';
 
@@ -52,60 +54,80 @@ export async function registerUser(request, response, next) {
   }
 }
 
-export async function loginUser(request, response, next) {
-  try {
-    const { email, password } = request.body ?? {};
+export function createLoginUserController({
+  findUser = findUserByEmail,
+  authorizeAdmin = isAuthorizedAdminUser,
+  comparePassword = bcrypt.compare,
+  environment = process.env,
+} = {}) {
+  return async function loginUser(request, response, next) {
+    try {
+      const { email, password } = request.body ?? {};
 
-    if (!email || !String(email).trim()) {
-      throw new AppError(400, 'Email is required.');
+      if (!email || !String(email).trim()) {
+        throw new AppError(400, 'Email is required.');
+      }
+
+      if (!password || !String(password).trim()) {
+        throw new AppError(400, 'Password is required.');
+      }
+
+      const normalizedEmail = String(email).trim().toLowerCase();
+      const user = await findUser(normalizedEmail);
+      if (!user) {
+        throw new AppError(401, 'Invalid email or password.');
+      }
+
+      const passwordMatches = await comparePassword(String(password), user.password);
+      if (!passwordMatches) {
+        throw new AppError(401, 'Invalid email or password.');
+      }
+      if (user.status !== 'active') {
+        throw new AppError(403, 'This account has been suspended.');
+      }
+      if (user.role === 'admin') {
+        const authorized = await authorizeAdmin(user.id, user.email);
+        if (!authorized) {
+          throw new AppError(403, 'This administrator account is not authorized.');
+        }
+      }
+
+      const secret = environment.JWT_SECRET;
+      if (!secret) {
+        throw new AppError(500, 'JWT secret is not configured.');
+      }
+
+      const token = jwt.sign(
+        {
+          id: user.id,
+          email: user.email,
+          role: user.role,
+          name: user.name,
+          passwordVersion: user.password_version,
+        },
+        secret,
+        { expiresIn: '1d' }
+      );
+
+      response.status(200).json({
+        success: true,
+        message: 'Login successful',
+        token,
+        user: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          requiresPasswordChange: Boolean(user.password_change_required),
+        },
+      });
+    } catch (error) {
+      next(error);
     }
-
-    if (!password || !String(password).trim()) {
-      throw new AppError(400, 'Password is required.');
-    }
-
-    const normalizedEmail = String(email).trim().toLowerCase();
-    const user = await findUserByEmail(normalizedEmail);
-    if (!user) {
-      throw new AppError(401, 'Invalid email or password.');
-    }
-
-    const passwordMatches = await bcrypt.compare(String(password), user.password);
-    if (!passwordMatches) {
-      throw new AppError(401, 'Invalid email or password.');
-    }
-
-    const secret = process.env.JWT_SECRET;
-    if (!secret) {
-      throw new AppError(500, 'JWT secret is not configured.');
-    }
-
-    const token = jwt.sign(
-      {
-        id: user.id,
-        email: user.email,
-        role: user.role,
-        name: user.name,
-      },
-      secret,
-      { expiresIn: '1d' }
-    );
-
-    response.status(200).json({
-      success: true,
-      message: 'Login successful',
-      token,
-      user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-      },
-    });
-  } catch (error) {
-    next(error);
-  }
+  };
 }
+
+export const loginUser = createLoginUserController();
 
 export async function getAuthenticatedUser(request, response, next) {
   try {
@@ -127,6 +149,7 @@ export async function getAuthenticatedUser(request, response, next) {
         company: user.company_name,
         location: user.location,
         created_at: user.created_at,
+        requiresPasswordChange: Boolean(user.password_change_required),
       },
     });
   } catch (error) {
@@ -136,6 +159,10 @@ export async function getAuthenticatedUser(request, response, next) {
 
 export async function updateAuthenticatedUser(request, response, next) {
   try {
+    if (request.user.role === 'admin') {
+      throw new AppError(403, 'Administrator profile changes are not available.');
+    }
+
     const validationError = validateProfileUpdateInput(
       request.body,
       request.user.role,
@@ -189,4 +216,97 @@ export async function updateAuthenticatedUser(request, response, next) {
     next(error);
   }
 }
+
+export function createChangeAuthenticatedPasswordController({
+  findUserById: findUser = findUserById,
+  findUserByEmail: findByEmail = findUserByEmail,
+  changePassword = changeUserPassword,
+  comparePassword = bcrypt.compare,
+  hashPassword = bcrypt.hash,
+  environment = process.env,
+} = {}) {
+  return async function changeAuthenticatedPassword(request, response, next) {
+    try {
+      if (request.user.role !== 'admin') {
+        throw new AppError(403, 'Only administrator accounts can use this password setup endpoint.');
+      }
+
+      const currentPassword = request.body?.currentPassword;
+      const newPassword = request.body?.newPassword;
+      if (typeof currentPassword !== 'string' || !currentPassword) {
+        throw new AppError(400, 'The current password is required.');
+      }
+      if (
+        typeof newPassword !== 'string'
+        || newPassword.length < 12
+        || Buffer.byteLength(newPassword, 'utf8') > 72
+      ) {
+        throw new AppError(
+          400,
+          'The new password must be at least 12 characters and no more than 72 UTF-8 bytes.',
+        );
+      }
+
+      const user = await findUser(request.user.id);
+      if (!user) {
+        throw new AppError(404, 'Authenticated user not found.');
+      }
+
+      const fullUser = await findByEmail(user.email);
+      if (!fullUser) {
+        throw new AppError(404, 'Authenticated user not found.');
+      }
+
+      const passwordMatches = await comparePassword(currentPassword, fullUser.password);
+      if (!passwordMatches) {
+        throw new AppError(401, 'The current password is incorrect.');
+      }
+      if (await comparePassword(newPassword, fullUser.password)) {
+        throw new AppError(400, 'The new password must be different from the temporary password.');
+      }
+      if (fullUser.password_change_required !== true) {
+        throw new AppError(409, 'Password setup has already been completed.');
+      }
+
+      const passwordHash = await hashPassword(newPassword, 12);
+      const updatedUser = await changePassword(request.user.id, passwordHash);
+      if (!updatedUser) {
+        throw new AppError(409, 'Password setup has already been completed.');
+      }
+      const secret = environment.JWT_SECRET;
+      if (!secret) {
+        throw new AppError(500, 'JWT secret is not configured.');
+      }
+      const token = jwt.sign(
+        {
+          id: updatedUser.id,
+          email: updatedUser.email,
+          role: updatedUser.role,
+          name: updatedUser.name,
+          passwordVersion: updatedUser.password_version,
+        },
+        secret,
+        { expiresIn: '1d' },
+      );
+
+      response.status(200).json({
+        success: true,
+        message: 'Password changed successfully.',
+        requiresPasswordChange: false,
+        token,
+        user: {
+          id: updatedUser.id,
+          name: updatedUser.name,
+          email: updatedUser.email,
+          role: updatedUser.role,
+          requiresPasswordChange: false,
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+}
+
+export const changeAuthenticatedPassword = createChangeAuthenticatedPasswordController();
 

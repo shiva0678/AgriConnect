@@ -4,6 +4,7 @@ import {
   loginUser,
   registerUser,
   updateAuthenticatedUser,
+  changeAuthenticatedPassword,
 } from '../controllers/authController.js';
 import { authenticateToken } from '../middleware/authMiddleware.js';
 
@@ -81,5 +82,6 @@ router.post('/login', loginUser);
 
 router.get('/me', authenticateToken, getAuthenticatedUser);
 router.patch('/me', authenticateToken, updateAuthenticatedUser);
+router.post('/change-password', authenticateToken, changeAuthenticatedPassword);
 
 export default router;

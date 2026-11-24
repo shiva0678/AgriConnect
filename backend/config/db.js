@@ -3,7 +3,11 @@ import pg from "pg";
 
 const { Pool } = pg;
 
-const databaseUrl = process.env.DATABASE_URL;
+const isTestEnvironment = process.env.NODE_ENV === "test"
+  || Boolean(process.env.NODE_TEST_CONTEXT);
+const databaseUrl = isTestEnvironment
+  ? process.env.TEST_DATABASE_URL || process.env.DATABASE_URL
+  : process.env.DATABASE_URL;
 
 export const databaseConfig = {
   connectionString: databaseUrl,
@@ -16,9 +20,167 @@ pool.on("error", (error) => {
   console.error("Unexpected PostgreSQL pool error:", error.message);
 });
 
+export const ADMIN_USER_MANAGEMENT_USERS_INDEX_SQL = `
+  CREATE INDEX IF NOT EXISTS users_role_status_created_idx
+  ON users (role, status, created_at DESC, id DESC)
+`;
+
+export const ADMIN_USER_MANAGEMENT_AUDIT_TABLE_SQL = `
+  CREATE TABLE IF NOT EXISTS admin_user_action_audit_logs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    admin_id UUID NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+    target_user_id UUID REFERENCES users(id) ON DELETE RESTRICT,
+    target_reference VARCHAR(128) NOT NULL,
+    action VARCHAR(16) NOT NULL
+      CONSTRAINT admin_user_action_audit_logs_action_check
+      CHECK (action IN ('suspend', 'reactivate')),
+    reason TEXT,
+    outcome VARCHAR(10) NOT NULL
+      CONSTRAINT admin_user_action_audit_logs_outcome_check
+      CHECK (outcome IN ('success', 'failure')),
+    request_id VARCHAR(128) NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT admin_user_action_audit_logs_target_reference_length
+      CHECK (
+        CHAR_LENGTH(BTRIM(target_reference)) BETWEEN 1 AND 128
+      ),
+    CONSTRAINT admin_user_action_audit_logs_request_id_length
+      CHECK (
+        CHAR_LENGTH(BTRIM(request_id)) BETWEEN 1 AND 128
+      ),
+    CONSTRAINT admin_user_action_audit_logs_reason_length
+      CHECK (
+        reason IS NULL
+        OR (
+          CHAR_LENGTH(BTRIM(reason)) BETWEEN 1 AND 500
+        )
+      )
+  )
+`;
+
+export const ADMIN_USER_MANAGEMENT_AUDIT_INDEXES_SQL = Object.freeze([
+  `
+    CREATE INDEX IF NOT EXISTS admin_user_action_audit_logs_admin_created_idx
+    ON admin_user_action_audit_logs (
+      admin_id,
+      created_at DESC,
+      id DESC
+    )
+  `,
+  `
+    CREATE INDEX IF NOT EXISTS admin_user_action_audit_logs_target_created_idx
+    ON admin_user_action_audit_logs (
+      target_user_id,
+      created_at DESC,
+      id DESC
+    )
+  `,
+  `
+    CREATE INDEX IF NOT EXISTS admin_user_action_audit_logs_created_idx
+    ON admin_user_action_audit_logs (created_at DESC, id DESC)
+  `,
+]);
+
+export const ADMIN_USER_MANAGEMENT_AUDIT_MIGRATION_SQL = Object.freeze([
+  `
+    ALTER TABLE admin_user_action_audit_logs
+      ADD COLUMN IF NOT EXISTS target_reference VARCHAR(128)
+  `,
+  `
+    UPDATE admin_user_action_audit_logs
+    SET target_reference = target_user_id::text
+    WHERE (target_reference IS NULL OR BTRIM(target_reference) = '')
+      AND target_user_id IS NOT NULL
+  `,
+  `
+    UPDATE admin_user_action_audit_logs
+    SET target_reference = 'missing-target'
+    WHERE target_reference IS NULL OR BTRIM(target_reference) = ''
+  `,
+  `
+    ALTER TABLE admin_user_action_audit_logs
+      ALTER COLUMN target_reference SET NOT NULL
+  `,
+  `
+    ALTER TABLE admin_user_action_audit_logs
+      ALTER COLUMN target_user_id DROP NOT NULL
+  `,
+  `
+    DO $$
+    BEGIN
+      IF NOT EXISTS (
+        SELECT 1
+        FROM pg_constraint
+        WHERE conname = 'admin_user_action_audit_logs_target_reference_length'
+          AND conrelid = 'admin_user_action_audit_logs'::regclass
+      ) THEN
+        ALTER TABLE admin_user_action_audit_logs
+          ADD CONSTRAINT admin_user_action_audit_logs_target_reference_length
+          CHECK (CHAR_LENGTH(BTRIM(target_reference)) BETWEEN 1 AND 128);
+      END IF;
+
+      IF NOT EXISTS (
+        SELECT 1
+        FROM pg_constraint
+        WHERE conname = 'admin_user_action_audit_logs_request_id_length'
+          AND conrelid = 'admin_user_action_audit_logs'::regclass
+      ) THEN
+        ALTER TABLE admin_user_action_audit_logs
+          ADD CONSTRAINT admin_user_action_audit_logs_request_id_length
+          CHECK (CHAR_LENGTH(BTRIM(request_id)) BETWEEN 1 AND 128)
+          NOT VALID;
+      END IF;
+
+      IF NOT EXISTS (
+        SELECT 1
+        FROM pg_constraint
+        WHERE conname = 'admin_user_action_audit_logs_reason_length'
+          AND conrelid = 'admin_user_action_audit_logs'::regclass
+      ) THEN
+        ALTER TABLE admin_user_action_audit_logs
+          ADD CONSTRAINT admin_user_action_audit_logs_reason_length
+          CHECK (
+            reason IS NULL
+            OR CHAR_LENGTH(BTRIM(reason)) BETWEEN 1 AND 500
+          )
+          NOT VALID;
+      END IF;
+
+      IF NOT EXISTS (
+        SELECT 1
+        FROM pg_constraint
+        WHERE conname = 'admin_user_action_audit_logs_action_check'
+          AND conrelid = 'admin_user_action_audit_logs'::regclass
+      ) THEN
+        ALTER TABLE admin_user_action_audit_logs
+          ADD CONSTRAINT admin_user_action_audit_logs_action_check
+          CHECK (action IN ('suspend', 'reactivate'))
+          NOT VALID;
+      END IF;
+
+      IF NOT EXISTS (
+        SELECT 1
+        FROM pg_constraint
+        WHERE conname = 'admin_user_action_audit_logs_outcome_check'
+          AND conrelid = 'admin_user_action_audit_logs'::regclass
+      ) THEN
+        ALTER TABLE admin_user_action_audit_logs
+          ADD CONSTRAINT admin_user_action_audit_logs_outcome_check
+          CHECK (outcome IN ('success', 'failure'))
+          NOT VALID;
+      END IF;
+    END;
+    $$
+  `,
+]);
+
 export async function testDatabaseConnection() {
   if (!databaseUrl) {
-    throw new Error("DATABASE_URL is not configured");
+    throw new Error(
+      isTestEnvironment
+        ? "DATABASE_URL or TEST_DATABASE_URL is not configured"
+        : "DATABASE_URL is not configured",
+    );
   }
 
   const client = await pool.connect();
@@ -50,6 +212,51 @@ export async function initializeDatabase() {
   `);
 
   await pool.query(`
+    ALTER TABLE users
+      ADD COLUMN IF NOT EXISTS status VARCHAR(20) NOT NULL DEFAULT 'active',
+      ADD COLUMN IF NOT EXISTS password_change_required BOOLEAN NOT NULL DEFAULT FALSE,
+      ADD COLUMN IF NOT EXISTS password_version INTEGER NOT NULL DEFAULT 0,
+      ADD COLUMN IF NOT EXISTS suspended_at TIMESTAMPTZ,
+      ADD COLUMN IF NOT EXISTS suspended_reason TEXT,
+      ADD COLUMN IF NOT EXISTS suspended_by UUID
+  `);
+  await pool.query(`
+    ALTER TABLE users
+      DROP CONSTRAINT IF EXISTS users_role_check;
+    ALTER TABLE users
+      ADD CONSTRAINT users_role_check
+      CHECK (role IN ('farmer', 'buyer', 'admin'));
+  `);
+  await pool.query(`
+    ALTER TABLE users
+      DROP CONSTRAINT IF EXISTS users_status_check;
+    ALTER TABLE users
+      ADD CONSTRAINT users_status_check
+      CHECK (status IN ('active', 'suspended'));
+  `);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS authorized_admins (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      email VARCHAR(255) UNIQUE NOT NULL,
+      user_id UUID UNIQUE REFERENCES users(id) ON DELETE SET NULL,
+      status VARCHAR(20) NOT NULL DEFAULT 'active'
+        CHECK (status IN ('active', 'suspended')),
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      provisioned_by UUID REFERENCES users(id) ON DELETE SET NULL
+    )
+  `);
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS authorized_admins_status_idx
+      ON authorized_admins (status);
+  `);
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS users_created_at_idx
+      ON users (created_at DESC);
+  `);
+  await pool.query(ADMIN_USER_MANAGEMENT_USERS_INDEX_SQL);
+
+  await pool.query(`
     CREATE TABLE IF NOT EXISTS crops (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       farmer_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -73,6 +280,7 @@ export async function initializeDatabase() {
     CREATE INDEX IF NOT EXISTS crops_status_idx ON crops (status);
     CREATE INDEX IF NOT EXISTS crops_category_idx ON crops (category);
     CREATE INDEX IF NOT EXISTS crops_location_idx ON crops (location);
+    CREATE INDEX IF NOT EXISTS crops_created_at_idx ON crops (created_at DESC);
   `);
 
   await pool.query(`
@@ -215,4 +423,102 @@ export async function initializeDatabase() {
   await pool.query(`
     CREATE INDEX IF NOT EXISTS crop_images_crop_id_idx ON crop_images (crop_id);
   `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS admin_chat_sessions (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      admin_id UUID NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+      title VARCHAR(160),
+      context JSONB NOT NULL DEFAULT '{}'::jsonb,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      last_message_at TIMESTAMPTZ,
+      CONSTRAINT admin_chat_sessions_context_object
+        CHECK (
+          jsonb_typeof(context) = 'object'
+          AND octet_length(context::text) <= 8192
+        )
+    )
+  `);
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS admin_chat_sessions_admin_updated_idx
+      ON admin_chat_sessions (admin_id, updated_at DESC, id DESC);
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS admin_chat_messages (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      session_id UUID NOT NULL
+        REFERENCES admin_chat_sessions(id) ON DELETE RESTRICT,
+      sender_type VARCHAR(16) NOT NULL
+        CHECK (sender_type IN ('admin', 'assistant')),
+      content TEXT NOT NULL,
+      metadata JSONB,
+      idempotency_key UUID,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      CONSTRAINT admin_chat_messages_content_not_blank
+        CHECK (content ~ '[^[:space:]]'),
+      CONSTRAINT admin_chat_messages_content_max_length
+        CHECK (CHAR_LENGTH(content) <= 4000),
+      CONSTRAINT admin_chat_messages_metadata_object
+        CHECK (
+          metadata IS NULL
+          OR (
+            jsonb_typeof(metadata) = 'object'
+            AND octet_length(metadata::text) <= 16384
+          )
+        )
+    )
+  `);
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS admin_chat_messages_session_created_idx
+      ON admin_chat_messages (session_id, created_at DESC, id DESC);
+  `);
+  await pool.query(`
+    CREATE UNIQUE INDEX IF NOT EXISTS admin_chat_messages_idempotency_uidx
+      ON admin_chat_messages (session_id, idempotency_key)
+      WHERE idempotency_key IS NOT NULL;
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS admin_chat_audit_logs (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      admin_id UUID NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+      session_id UUID REFERENCES admin_chat_sessions(id) ON DELETE RESTRICT,
+      operation VARCHAR(80) NOT NULL
+        CHECK (operation ~ '^[a-z][a-z0-9_]{0,79}$'),
+      filters JSONB NOT NULL DEFAULT '{}'::jsonb,
+      outcome VARCHAR(10) NOT NULL
+        CHECK (outcome IN ('success', 'failure')),
+      duration_ms INTEGER
+        CHECK (duration_ms IS NULL OR duration_ms >= 0),
+      row_count INTEGER
+        CHECK (row_count IS NULL OR row_count >= 0),
+      model VARCHAR(128),
+      request_id VARCHAR(128),
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      CONSTRAINT admin_chat_audit_logs_filters_object
+        CHECK (
+          jsonb_typeof(filters) = 'object'
+          AND octet_length(filters::text) <= 8192
+        )
+    )
+  `);
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS admin_chat_audit_logs_admin_created_idx
+      ON admin_chat_audit_logs (admin_id, created_at DESC, id DESC);
+  `);
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS admin_chat_audit_logs_session_created_idx
+      ON admin_chat_audit_logs (session_id, created_at DESC, id DESC)
+      WHERE session_id IS NOT NULL;
+  `);
+
+  await pool.query(ADMIN_USER_MANAGEMENT_AUDIT_TABLE_SQL);
+  for (const migrationSql of ADMIN_USER_MANAGEMENT_AUDIT_MIGRATION_SQL) {
+    await pool.query(migrationSql);
+  }
+  for (const indexSql of ADMIN_USER_MANAGEMENT_AUDIT_INDEXES_SQL) {
+    await pool.query(indexSql);
+  }
 }

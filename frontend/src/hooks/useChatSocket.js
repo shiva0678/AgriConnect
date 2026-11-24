@@ -7,7 +7,7 @@ import {
   useMemo,
   useState,
 } from "react";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../context/useAuth";
 import { createChatSocket } from "../services/chatSocket";
 
 const ChatSocketContext = createContext(null);

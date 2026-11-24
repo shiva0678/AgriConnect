@@ -8,6 +8,9 @@ import swaggerUi from "swagger-ui-express";
 import { initializeDatabase, pool } from "./config/db.js";
 import { closeMongoDB, initializeMongoDB } from "./config/mongo.js";
 import authRoutes from "./routes/authRoutes.js";
+import adminDashboardRoutes from "./routes/adminDashboardRoutes.js";
+import adminChatRoutes from "./routes/adminChatRoutes.js";
+import adminUserRoutes from "./routes/adminUserRoutes.js";
 import healthRoutes from "./routes/healthRoutes.js";
 import cropRoutes from "./routes/cropRoutes.js";
 import orderRoutes from "./routes/orderRoutes.js";
@@ -40,6 +43,9 @@ app.get("/api/docs.json", (request, response) => {
 });
 
 app.use("/api/auth", authRoutes);
+app.use("/api/admin", adminDashboardRoutes);
+app.use("/api/admin/chat", adminChatRoutes);
+app.use("/api/admin/users", adminUserRoutes);
 app.use("/api/health", healthRoutes);
 app.use("/api", cropRoutes);
 app.use("/api", orderRoutes);

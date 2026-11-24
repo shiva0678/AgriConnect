@@ -8,7 +8,7 @@ import {
   useNavigate,
 } from "react-router-dom";
 import { BrandMark } from "./SiteChrome";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../context/useAuth";
 import { useChatUnreadCount } from "../hooks/useChatUnreadCount";
 import { useMotionDrawer } from "../hooks/useMotionDrawer";
 
